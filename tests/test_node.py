@@ -65,6 +65,42 @@ class FameGridAutoColorCorrectorTests(unittest.TestCase):
         self.assertGreaterEqual(float(output.min()), 0.0)
         self.assertLessEqual(float(output.max()), 1.0)
 
+    def test_auto_curve_does_not_create_new_endpoint_clipping(self):
+        ramp = torch.linspace(0.0, 1.0, 4096).reshape(1, 64, 64, 1)
+        image = torch.cat(
+            (
+                ramp,
+                torch.sqrt(ramp),
+                ramp.square(),
+            ),
+            dim=-1,
+        )
+        output, = self.node.correct(
+            image,
+            normalize_saturation=False,
+            brightness=0.0,
+            shadows=0.0,
+            highlights=0.0,
+            saturation=0.0,
+            vibrance=0.0,
+        )
+        self.assertLessEqual(int((output == 0.0).sum()), int((image == 0.0).sum()))
+        self.assertLessEqual(int((output == 1.0).sum()), int((image == 1.0).sum()))
+
+    def test_strength_above_one_does_not_extrapolate_technical_curve(self):
+        image = torch.rand(1, 48, 64, 3)
+        common = dict(
+            normalize_saturation=False,
+            brightness=0.0,
+            shadows=0.0,
+            highlights=0.0,
+            saturation=0.0,
+            vibrance=0.0,
+        )
+        at_one, = self.node.correct(image, auto_color_strength=1.0, **common)
+        above_one, = self.node.correct(image, auto_color_strength=1.1, **common)
+        self.assertTrue(torch.equal(at_one, above_one))
+
 
 if __name__ == "__main__":
     unittest.main()

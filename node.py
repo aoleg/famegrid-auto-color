@@ -18,7 +18,7 @@ class FameGridAutoColorCorrector:
     RETURN_TYPES = ("IMAGE",)
     RETURN_NAMES = ("image",)
     DESCRIPTION = (
-        "Deterministic per-image auto color curves using robust shadow/highlight "
+        "Endpoint-preserving per-image auto color curves using robust shadow/highlight "
         "anchors and a likely-neutral midtone, plus conservative saturation control."
     )
 
@@ -191,6 +191,51 @@ class FameGridAutoColorCorrector:
             values = values[::stride]
         return torch.quantile(values, quantile)
 
+    @staticmethod
+    def _endpoint_preserving_map(
+        values: torch.Tensor,
+        dark: torch.Tensor,
+        light: torch.Tensor,
+        correct_contrast: bool,
+    ) -> torch.Tensor:
+        """Neutralize endpoint colors without flattening the histogram tails.
+
+        Each channel uses a continuous three-segment curve through 0, the robust
+        shadow anchor, the robust highlight anchor, and 1. Unlike a percentile
+        stretch, values outside the anchors retain distinct tonal information.
+        """
+        if not correct_contrast:
+            return values
+
+        raw_span = light - dark
+        if not bool(torch.all(raw_span > 0.01)):
+            return values
+
+        luminance_weights = values.new_tensor([0.299, 0.587, 0.114])
+        target_dark = (dark * luminance_weights).sum().clamp(0.001, 0.45)
+        target_light = (light * luminance_weights).sum().clamp(0.55, 0.999)
+        if float(target_light - target_dark) < 0.05:
+            return values
+
+        dark = dark.clamp(1e-4, 0.98)
+        light = torch.maximum(light, dark + 0.01).clamp_max(0.9999)
+        view_shape = (1,) * (values.ndim - 1) + (3,)
+        dark_view = dark.view(view_shape)
+        light_view = light.view(view_shape)
+
+        low = values * (target_dark / dark).view(view_shape)
+        middle = target_dark + (values - dark_view) * (
+            (target_light - target_dark) / (light - dark)
+        ).view(view_shape)
+        high = target_light + (values - light_view) * (
+            (1.0 - target_light) / (1.0 - light)
+        ).view(view_shape)
+        return torch.where(
+            values <= dark_view,
+            low,
+            torch.where(values <= light_view, middle, high),
+        ).clamp(0.0, 1.0)
+
     @classmethod
     def _auto_color_curves(
         cls,
@@ -199,7 +244,7 @@ class FameGridAutoColorCorrector:
         correct_contrast: bool,
         strength: float,
     ) -> torch.Tensor:
-        """Build robust endpoint and neutral-midtone curves per batch item."""
+        """Build full-range-preserving endpoint and neutral curves per image."""
         outputs = []
         tail = max(clip_percent / 100.0, 0.005)
         luminance_weights = rgb.new_tensor([0.299, 0.587, 0.114])
@@ -216,14 +261,10 @@ class FameGridAutoColorCorrector:
             dark = sample[luminance <= low_luminance].mean(dim=0)
             light = sample[luminance >= high_luminance].mean(dim=0)
 
-            raw_span = light - dark
-            if correct_contrast and bool(torch.all(raw_span > 0.01)):
-                span = raw_span.clamp_min(0.05)
-                mapped = ((frame - dark) / span).clamp(0.0, 1.0)
-                mapped_sample = ((sample - dark) / span).clamp(0.0, 1.0)
-            else:
-                mapped = frame
-                mapped_sample = sample
+            mapped = cls._endpoint_preserving_map(frame, dark, light, correct_contrast)
+            mapped_sample = cls._endpoint_preserving_map(
+                sample, dark, light, correct_contrast
+            )
 
             mapped_luminance = (mapped_sample * luminance_weights).sum(dim=1)
             maximum = mapped_sample.max(dim=1).values
@@ -258,7 +299,11 @@ class FameGridAutoColorCorrector:
             else:
                 corrected = mapped
 
-            outputs.append((frame + strength * (corrected - frame)).clamp(0.0, 1.0))
+            # Extrapolating beyond the technical curve can create new clipping,
+            # so 1.0 is the maximum effective blend even though old workflows
+            # may contain a larger saved value such as the published 1.10 default.
+            blend = max(0.0, min(1.0, float(strength)))
+            outputs.append((frame + blend * (corrected - frame)).clamp(0.0, 1.0))
 
         return torch.stack(outputs, dim=0)
 

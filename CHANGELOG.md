@@ -2,6 +2,14 @@
 
 All notable changes to FameGrid Auto Color are documented here.
 
+## 1.1.0 - 2026-08-01
+
+- Replaced hard percentile endpoint stretching with continuous, endpoint-preserving curves.
+- Preserved distinct shadow and highlight-tail values instead of flattening them to black or white.
+- Capped the effective technical-curve blend at `1.0` to prevent over-strength extrapolation from creating clipping.
+- Kept the published FameGrid finishing defaults unchanged.
+- Added regression coverage for endpoint clipping and over-strength behavior.
+
 ## 1.0.0 - 2026-07-31
 
 - Initial standalone ComfyUI release.

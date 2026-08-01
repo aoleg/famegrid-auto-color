@@ -12,7 +12,7 @@ settings.
 ## Features
 
 - Automatic color-cast correction from image statistics
-- Robust shadow and highlight endpoint curves
+- Full-range-preserving shadow and highlight endpoint curves
 - Likely-neutral midtone correction with false-neutral safeguards
 - Automatic contrast and conservative saturation normalization
 - Manual brightness, shadows, highlights, saturation, and vibrance
@@ -69,7 +69,7 @@ The published defaults are the current FameGrid finishing preset:
 | Control | Default | What it does |
 | --- | ---: | --- |
 | `white_balance_power` | `8` | Legacy compatibility control. `0` disables auto color; any value above `0` enables Auto Color Curves. |
-| `auto_color_strength` | `1.10` | Blends the adaptive color and endpoint correction. |
+| `auto_color_strength` | `1.10` | Blends the adaptive color and endpoint correction. The technical curve caps its effective blend at `1.0` to avoid creating clipping. |
 | `correct_contrast` | `true` | Enables robust endpoint contrast as part of the color curves. |
 | `contrast_clip_percent` | `7.3` | Percentage used to form robust shadow and highlight color groups. |
 | `normalize_saturation` | `true` | Corrects only images outside the conservative saturation band. |
@@ -96,9 +96,11 @@ The node calculates luminance and builds shadow and highlight color anchors from
 the configured histogram tails. Averaging groups of pixels is less sensitive to
 a single clipped pixel than using raw minimum and maximum values.
 
-When sufficient channel range exists, separate RGB endpoint curves map the
-estimated dark and light anchors into a usable tonal range. Images without enough
-tonal evidence skip the stretch instead of collapsing flat frames.
+When sufficient channel range exists, separate RGB curves pass continuously
+through true black, the estimated shadow anchor, the estimated highlight anchor,
+and true white. Pixels beyond the robust anchors remain distinct instead of being
+flattened into clipped black or white plateaus. Images without enough tonal
+evidence skip the correction instead of collapsing flat frames.
 
 ### 3. Find a likely-neutral midtone
 
@@ -139,7 +141,8 @@ grading latitude.
 
 - Start with the defaults and reduce `auto_color_strength` if a correction feels
   too assertive.
-- Lower `contrast_clip_percent` to preserve more of the original endpoints.
+- `contrast_clip_percent` selects the shadow and highlight groups used for analysis;
+  it no longer discards those histogram tails.
 - Set `white_balance_power` to `0` to bypass auto color while retaining optional
   contrast and manual grading.
 - Keep `protect_skin` enabled for portraits unless you intentionally want a full
@@ -152,7 +155,8 @@ grading latitude.
 - This is a global correction, not a semantic or locally masked grade.
 - Any deterministic neutral estimator can be ambiguous when a scene contains no
   credible neutral colors or is intentionally dominated by one hue.
-- Clipped source channels cannot be reconstructed.
+- Clipped source channels cannot be reconstructed, but the node avoids creating
+  new endpoint clipping in its automatic technical curve.
 - The node does not convert color spaces or attach ICC profiles; it operates on
   the RGB values supplied by ComfyUI.
 
