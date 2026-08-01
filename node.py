@@ -53,7 +53,7 @@ class FameGridAutoColorCorrector:
                 "correct_contrast": ("BOOLEAN", {"default": True}),
                 "contrast_clip_percent": (
                     "FLOAT",
-                    {"default": 6.0, "min": 0.0, "max": 10.0, "step": 0.1},
+                    {"default": 7.3, "min": 0.0, "max": 10.0, "step": 0.1},
                 ),
                 "normalize_saturation": ("BOOLEAN", {"default": True}),
                 "saturation_strength": (
@@ -70,7 +70,7 @@ class FameGridAutoColorCorrector:
                 "brightness": (
                     "FLOAT",
                     {
-                        "default": 0.0,
+                        "default": 0.1,
                         "min": -1.0,
                         "max": 1.0,
                         "step": 0.05,
@@ -79,7 +79,7 @@ class FameGridAutoColorCorrector:
                 ),
                 "shadows": (
                     "FLOAT",
-                    {"default": 0.05, "min": -1.0, "max": 1.0, "step": 0.05},
+                    {"default": -0.15, "min": -1.0, "max": 1.0, "step": 0.05},
                 ),
                 "highlights": (
                     "FLOAT",
@@ -98,7 +98,7 @@ class FameGridAutoColorCorrector:
                 "vibrance": (
                     "FLOAT",
                     {
-                        "default": -0.3,
+                        "default": -0.35,
                         "min": -1.0,
                         "max": 1.0,
                         "step": 0.05,
@@ -310,15 +310,15 @@ class FameGridAutoColorCorrector:
         white_balance_power: int = 8,
         auto_color_strength: float = 1.1,
         correct_contrast: bool = True,
-        contrast_clip_percent: float = 6.0,
+        contrast_clip_percent: float = 7.3,
         normalize_saturation: bool = True,
         saturation_strength: float = 0.15,
         protect_skin: bool = True,
-        brightness: float = 0.0,
-        shadows: float = 0.05,
+        brightness: float = 0.1,
+        shadows: float = -0.15,
         highlights: float = -0.05,
         saturation: float = 0.0,
-        vibrance: float = -0.3,
+        vibrance: float = -0.35,
     ):
         self._validate_image(image)
 

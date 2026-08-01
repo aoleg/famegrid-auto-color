@@ -71,15 +71,15 @@ The published defaults are the current FameGrid finishing preset:
 | `white_balance_power` | `8` | Legacy compatibility control. `0` disables auto color; any value above `0` enables Auto Color Curves. |
 | `auto_color_strength` | `1.10` | Blends the adaptive color and endpoint correction. |
 | `correct_contrast` | `true` | Enables robust endpoint contrast as part of the color curves. |
-| `contrast_clip_percent` | `6.0` | Percentage used to form robust shadow and highlight color groups. |
+| `contrast_clip_percent` | `7.3` | Percentage used to form robust shadow and highlight color groups. |
 | `normalize_saturation` | `true` | Corrects only images outside the conservative saturation band. |
 | `saturation_strength` | `0.15` | Strength of automatic saturation normalization. |
 | `protect_skin` | `true` | Reduces automatic saturation and manual vibrance changes on skin hues. |
-| `brightness` | `0.00` | Global brightness. Negative darkens; positive brightens. |
-| `shadows` | `0.05` | Negative deepens shadows; positive lifts them. |
+| `brightness` | `0.10` | Global brightness. Negative darkens; positive brightens. |
+| `shadows` | `-0.15` | Negative deepens shadows; positive lifts them. |
 | `highlights` | `-0.05` | Negative lowers highlights; positive raises them. |
 | `saturation` | `0.00` | Global saturation. `-1` produces grayscale; positive values boost color. |
-| `vibrance` | `-0.30` | Targets muted colors more strongly than colors that are already saturated. |
+| `vibrance` | `-0.35` | Targets muted colors more strongly than colors that are already saturated. |
 
 Manual grading controls range from `-1` to `1`.
 
