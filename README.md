@@ -155,10 +155,11 @@ The node calculates luminance and builds shadow and highlight color anchors from
 the configured histogram tails. Averaging groups of pixels is less sensitive to
 a single clipped pixel than using raw minimum and maximum values.
 
-With `preserve_hue` enabled (the default), those anchors are reduced to
-luminance and every channel of a pixel is scaled by the same gain, so the
-stretch is purely tonal and cannot change hue. Highlights above the shoulder
-roll off smoothly toward white instead of being clamped.
+With `preserve_hue` enabled (the default), the curve passes continuously
+through true black, the shadow anchor, the highlight anchor, and true white,
+so values outside the anchors stay distinct rather than clamping flat. It runs
+on luminance and scales all three channels by the resulting gain, so the
+correction is purely tonal and cannot change hue.
 
 This matters on bright saturated subjects, sunlit skin most of all. Scaling
 each channel against its own anchor and clamping at `1.0` lets the brightest

@@ -8,11 +8,12 @@ Fixes blown, yellow-shifted highlights on bright saturated subjects — sunlit
 skin most visibly. **Output changes for existing workflows at default
 settings.**
 
-- Added `preserve_hue` (default `true`). The endpoint curves are now driven
-  from luminance with all three channels scaled by a common gain, so the
-  stretch cannot rotate hue, and highlights roll off through a smooth shoulder
-  instead of being clamped. Set it to `false` for the previous per-channel
-  behavior.
+- Added `preserve_hue` (default `true`). The endpoint curve is a continuous
+  three-segment map through black, the shadow anchor, the highlight anchor, and
+  white, driven from luminance with all three channels scaled by a common gain
+  — so tail values stay distinct, the midtones genuinely stretch, and the
+  correction cannot rotate hue. Set it to `false` for per-channel endpoint
+  neutralization with minimal tonal change.
 - The previous per-channel stretch let the brightest channel clip on its own.
   On skin, red saturated first and the highlight drifted yellow before
   collapsing to a flat, detail-free plateau. Measured on a sample portrait at
@@ -38,7 +39,11 @@ settings.**
   that path's effective blend at `1.0` to stop over-strength extrapolation from
   creating new clipping. Contributed by Miguel (`76dfaf27`); on the
   hue-preserving path the shoulder handles overshoot, so strength above `1.0`
-  remains meaningful there.
+  remains meaningful there. That curve shape is also what the hue-preserving
+  path now uses, applied to luminance and with targets chosen to expand
+  contrast rather than hold the anchors at their own brightness — on a sample
+  portrait this cut crushed shadow pixels roughly threefold while keeping the
+  tonal expansion the per-channel form gives up.
 
 ## 1.1.0 - 2026-08-01
 

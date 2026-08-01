@@ -254,21 +254,43 @@ class FameGridAutoColorCorrector:
         dark: torch.Tensor,
         light: torch.Tensor,
         weights: torch.Tensor,
+        target_dark: float = 0.02,
+        target_light: float = 0.98,
     ) -> torch.Tensor:
-        """Apply the endpoint stretch to luminance, then scale RGB by the gain.
+        """Endpoint-preserving tonal curve applied as one gain per pixel.
 
-        The per-channel variant maps each channel against its own anchor, which
-        doubles as a white balance but compresses whichever channel has least
-        headroom -- rotating hue in the highlights. Here the anchors are reduced
-        to luminance so the stretch is purely tonal; color correction is left to
-        the neutral-midtone gamma, which is the step actually designed for it.
+        Combines the two ideas this file now carries. The shape is the
+        three-segment curve contributed upstream: continuous through 0, the
+        shadow anchor, the highlight anchor, and 1, so values outside the
+        anchors stay distinct instead of being clamped flat. The application is
+        hue-preserving: the curve runs on luminance and all three channels are
+        scaled by the resulting gain, so R:G:B ratios -- and therefore hue --
+        are untouched.
+
+        The difference from the per-channel variant is where the anchors land.
+        There they map to their own luminance, which neutralizes endpoint color
+        but performs no tonal expansion. Here they map to `target_dark` and
+        `target_light`, so the midtones genuinely stretch; endpoint color is
+        left to the neutral-midtone gamma, the step designed for it.
         """
-        dark_luma = (dark * weights).sum()
-        light_luma = (light * weights).sum()
-        span = (light_luma - dark_luma).clamp_min(0.05)
+        dark_luma = (dark * weights).sum().clamp(0.0, 0.45)
+        light_luma = (light * weights).sum().clamp(0.55, 1.0)
+        if float(light_luma - dark_luma) < 0.05:
+            return rgb
 
         luma = (rgb * weights).sum(dim=-1, keepdim=True)
-        target = ((luma - dark_luma) / span).clamp_min(0.0)
+        below = luma * (target_dark / dark_luma.clamp_min(1e-4))
+        middle = target_dark + (luma - dark_luma) * (
+            (target_light - target_dark) / (light_luma - dark_luma)
+        )
+        above = target_light + (luma - light_luma) * (
+            (1.0 - target_light) / (1.0 - light_luma).clamp_min(1e-4)
+        )
+        target = torch.where(
+            luma <= dark_luma,
+            below,
+            torch.where(luma <= light_luma, middle, above),
+        ).clamp(0.0, 1.0)
         return rgb * (target / luma.clamp_min(1e-6))
 
     @staticmethod
