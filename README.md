@@ -129,12 +129,12 @@ The published defaults are the current FameGrid finishing preset:
 | `white_balance_power` | `8` | Legacy compatibility control. `0` disables auto color; any value above `0` enables Auto Color Curves. |
 | `auto_color_strength` | `0.80` | Blends the adaptive color and endpoint correction. Values above `1.0` extrapolate past the computed correction; with `preserve_hue` off that extrapolation is capped at `1.0` to avoid creating clipping. |
 | `correct_contrast` | `true` | Enables robust endpoint contrast as part of the color curves. |
-| `contrast_clip_percent` | `0.1` | Histogram tail used to form the shadow and highlight anchors. The effective tail is floored at `0.5%`. |
+| `contrast_clip_percent` | `7.3` | Histogram tail used to form the shadow and highlight anchors. The effective tail is floored at `0.5%`. |
 | `normalize_saturation` | `true` | Corrects only images outside the conservative saturation band. |
 | `saturation_strength` | `0.15` | Strength of automatic saturation normalization. |
 | `protect_skin` | `true` | Reduces automatic saturation and manual vibrance changes on skin hues. |
 | `preserve_hue` | `true` | Drives the endpoint curves from luminance and scales all three channels together, so highlights roll off without rotating hue. |
-| `brightness` | `0.00` | Global brightness. Negative darkens; positive brightens. Weighted toward the shadow end, so positive values lift the black point. |
+| `brightness` | `0.10` | Global brightness. Negative darkens; positive brightens. Weighted toward the shadow end, so positive values lift the black point — which is what keeps the default `contrast_clip_percent` from crushing shadows. |
 | `shadows` | `-0.15` | Negative deepens shadows; positive lifts them. |
 | `highlights` | `-0.05` | Negative lowers highlights; positive raises them. |
 | `saturation` | `0.00` | Global saturation. `-1` produces grayscale; positive values boost color. |
@@ -219,8 +219,10 @@ grading latitude.
 - Start with the defaults and reduce `auto_color_strength` if a correction feels
   too assertive.
 - `contrast_clip_percent` selects the shadow and highlight groups used for
-  analysis. Raise it for a more assertive stretch; large values push a
-  correspondingly large share of the image toward pure black and white.
+  analysis. Raise it for a more assertive stretch, lower it for a gentler one.
+  It is paired with `brightness`: a large clip compresses shadows hard, and the
+  default `+0.1` brightness is what keeps them off the floor. If you lower one,
+  reconsider the other.
 - Leave `preserve_hue` on unless you specifically want the per-channel look; it
   has no cost on images that never overshoot, and it is what keeps bright skin
   from going yellow and flat. Turn it off for endpoint colour neutralization

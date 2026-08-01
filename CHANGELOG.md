@@ -22,15 +22,14 @@ settings.**
 - Applied the same hue-preserving rolloff to the `white_balance_power = 0`
   fallback stretch, which had neither robust anchors nor a strength blend and
   was measurably more damaging than the main path.
-- Changed `contrast_clip_percent` default from `7.3` to `0.1`. The old value
-  drove roughly 12% of a typical image into the clamp; conventional auto-levels
-  clips well under 1%.
 - Changed `auto_color_strength` default from `1.1` to `0.8`. Values above `1.0`
   extrapolate past the computed correction rather than blending toward it.
-- Changed `brightness` default from `0.1` to `0.0`. Its gain scales with how
-  dark a pixel already is, so `0.1` raised the black point by ~10 levels while
-  moving highlights by ~2 — a shadow lift that partly undid the endpoint
-  correction and overrode the preset's own `shadows = -0.15`.
+  `contrast_clip_percent` and `brightness` keep their published values: once
+  the curve no longer clamps, `7.3` is no longer destructive, and the `+0.1`
+  brightness lift is what keeps its aggressive shadow compression off the floor.
+  On the sample portrait these defaults now clip nothing at either end — 0.00%
+  of pixels pinned at black or white — while raising contrast from 152.3 to
+  186.1 and holding highlight hue to within 1.7 degrees.
 - The hue-preserving shoulder is a no-op on images that never exceed `1.0`, so
   enabling it cannot dim near-white content that was already in range.
 - Replaced the hard percentile endpoint stretch on the per-channel path with a

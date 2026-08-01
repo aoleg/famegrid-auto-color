@@ -57,7 +57,7 @@ class FameGridAutoColorCorrector:
                 "contrast_clip_percent": (
                     "FLOAT",
                     {
-                        "default": 0.1,
+                        "default": 7.3,
                         "min": 0.0,
                         "max": 10.0,
                         "step": 0.1,
@@ -94,7 +94,7 @@ class FameGridAutoColorCorrector:
                 "brightness": (
                     "FLOAT",
                     {
-                        "default": 0.0,
+                        "default": 0.1,
                         "min": -1.0,
                         "max": 1.0,
                         "step": 0.05,
@@ -254,7 +254,7 @@ class FameGridAutoColorCorrector:
         dark: torch.Tensor,
         light: torch.Tensor,
         weights: torch.Tensor,
-        target_dark: float = 0.02,
+        target_dark: float = 0.005,
         target_light: float = 0.98,
     ) -> torch.Tensor:
         """Endpoint-preserving tonal curve applied as one gain per pixel.
@@ -266,6 +266,10 @@ class FameGridAutoColorCorrector:
         hue-preserving: the curve runs on luminance and all three channels are
         scaled by the resulting gain, so R:G:B ratios -- and therefore hue --
         are untouched.
+
+        `target_dark` is deliberately small. It only has to keep the sub-anchor
+        tail off the floor; any larger and the midtone segment starts visibly
+        above black, lifting the whole shadow range and washing out the image.
 
         The difference from the per-channel variant is where the anchors land.
         There they map to their own luminance, which neutralizes endpoint color
@@ -484,12 +488,12 @@ class FameGridAutoColorCorrector:
         white_balance_power: int = 8,
         auto_color_strength: float = 0.8,
         correct_contrast: bool = True,
-        contrast_clip_percent: float = 0.1,
+        contrast_clip_percent: float = 7.3,
         normalize_saturation: bool = True,
         saturation_strength: float = 0.15,
         protect_skin: bool = True,
         preserve_hue: bool = True,
-        brightness: float = 0.0,
+        brightness: float = 0.1,
         shadows: float = -0.15,
         highlights: float = -0.05,
         saturation: float = 0.0,
