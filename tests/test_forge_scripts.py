@@ -25,6 +25,7 @@ EXPECTED_PARAM_ORDER = [
     "normalize_saturation",
     "saturation_strength",
     "protect_skin",
+    "preserve_hue",
     "brightness",
     "shadows",
     "highlights",
@@ -32,7 +33,8 @@ EXPECTED_PARAM_ORDER = [
     "vibrance",
 ]
 
-DEFAULT_ARGS = (True, 1.1, True, 7.3, True, 0.15, True, 0.1, -0.15, -0.05, 0.0, -0.35)  # matches EXPECTED_PARAM_ORDER[1:]
+# matches EXPECTED_PARAM_ORDER[1:]
+DEFAULT_ARGS = (True, 0.8, True, 0.1, True, 0.15, True, True, 0.1, -0.15, -0.05, 0.0, -0.35)
 
 _installed_module_names = []
 famegrid_auto_color = None
@@ -107,6 +109,7 @@ class FameGridAutoColorScriptTests(unittest.TestCase):
             node_defaults["normalize_saturation"][1]["default"],
             node_defaults["saturation_strength"][1]["default"],
             node_defaults["protect_skin"][1]["default"],
+            node_defaults["preserve_hue"][1]["default"],
             node_defaults["brightness"][1]["default"],
             node_defaults["shadows"][1]["default"],
             node_defaults["highlights"][1]["default"],
@@ -139,7 +142,7 @@ class FameGridAutoColorScriptTests(unittest.TestCase):
         self.assertNotEqual(list(pp.image.getdata()), original_pixels)
         self.assertEqual(p.extra_generation_params["FameGrid AC Auto Color"], True)
         self.assertEqual(p.extra_generation_params["FameGrid AC Brightness"], 0.1)
-        self.assertEqual(len(p.extra_generation_params), 12)
+        self.assertEqual(len(p.extra_generation_params), len(EXPECTED_PARAM_ORDER) - 1)
 
     def test_auto_color_checkbox_maps_to_legacy_white_balance_power(self):
         image = Image.new("RGB", (16, 16), color=(100, 150, 200))
@@ -148,7 +151,9 @@ class FameGridAutoColorScriptTests(unittest.TestCase):
         # enable=True but every effect disabled -- image should be untouched,
         # which only holds if auto_color=False correctly maps to
         # white_balance_power=0 inside to_node_kwargs().
-        self.script.before_process_batch(p, True, False, 1.1, False, 7.3, False, 0.15, True, 0.0, 0.0, 0.0, 0.0, 0.0)
+        self.script.before_process_batch(
+            p, True, False, 0.8, False, 0.1, False, 0.15, True, True, 0.0, 0.0, 0.0, 0.0, 0.0
+        )
         self.script.postprocess_image_after_composite(p, pp)
 
         self.assertEqual(list(pp.image.getdata()), list(image.getdata()))

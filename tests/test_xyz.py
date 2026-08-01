@@ -73,8 +73,8 @@ class XyzSupportTests(unittest.TestCase):
         cache = {}
         self.xyz_module.xyz_support(cache)
 
-        # 5 booleans (enable + 4 from lib_famegrid.params.BOOL_FIELDS) + 8 floats
-        self.assertEqual(len(self.fake_xyz_grid.axis_options), 13)
+        # 6 booleans (enable + 5 from lib_famegrid.params.BOOL_FIELDS) + 8 floats
+        self.assertEqual(len(self.fake_xyz_grid.axis_options), 14)
 
     def test_second_call_does_not_duplicate_axis_options(self):
         self.xyz_module.xyz_support({})
@@ -110,7 +110,7 @@ class XyzSupportTests(unittest.TestCase):
         self.xyz_module.xyz_support(cache)
 
         labels = [opt.label for opt in self.fake_xyz_grid.axis_options]
-        self.assertEqual(len(labels), 13)
+        self.assertEqual(len(labels), 14)
         self.assertEqual(len(labels), len(set(labels)))
         self.assertTrue(all(label.startswith("FameGrid AC ") for label in labels))
 

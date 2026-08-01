@@ -87,11 +87,17 @@ class FameGridAutoColorScript(scripts.Script):
                     value=default("saturation_strength"),
                     label="Saturation Normalization Strength",
                 )
-            protect_skin = gr.Checkbox(
-                value=default("protect_skin"),
-                label="Protect skin hues",
-                info="reduces automatic saturation and manual vibrance changes on skin hues",
-            )
+            with gr.Row():
+                protect_skin = gr.Checkbox(
+                    value=default("protect_skin"),
+                    label="Protect skin hues",
+                    info="reduces automatic saturation and manual vibrance changes on skin hues",
+                )
+                preserve_hue = gr.Checkbox(
+                    value=default("preserve_hue"),
+                    label="Preserve hue in highlights",
+                    info="rolls highlights off without letting the brightest channel clip alone",
+                )
             with gr.Row():
                 brightness = gr.Slider(minimum=-1.0, maximum=1.0, step=0.05, value=default("brightness"), label="Brightness")
                 shadows = gr.Slider(minimum=-1.0, maximum=1.0, step=0.05, value=default("shadows"), label="Shadows")
@@ -104,7 +110,7 @@ class FameGridAutoColorScript(scripts.Script):
         # positional args from this same UI list against FIELDS by position.
         controls = [
             auto_color, auto_color_strength, correct_contrast, contrast_clip_percent,
-            normalize_saturation, saturation_strength, protect_skin,
+            normalize_saturation, saturation_strength, protect_skin, preserve_hue,
             brightness, shadows, highlights, saturation, vibrance,
         ]
         self.infotext_fields = [
@@ -125,6 +131,7 @@ class FameGridAutoColorScript(scripts.Script):
         normalize_saturation,
         saturation_strength,
         protect_skin,
+        preserve_hue,
         brightness,
         shadows,
         highlights,
@@ -141,6 +148,7 @@ class FameGridAutoColorScript(scripts.Script):
             "normalize_saturation": normalize_saturation,
             "saturation_strength": saturation_strength,
             "protect_skin": protect_skin,
+            "preserve_hue": preserve_hue,
             "brightness": brightness,
             "shadows": shadows,
             "highlights": highlights,

@@ -67,11 +67,17 @@ class ScriptPostprocessingFameGridAutoColor(scripts_postprocessing.ScriptPostpro
                     value=default("saturation_strength"),
                     label="Saturation Normalization Strength",
                 )
-            protect_skin = gr.Checkbox(
-                value=default("protect_skin"),
-                label="Protect skin hues",
-                info="reduces automatic saturation and manual vibrance changes on skin hues",
-            )
+            with gr.Row():
+                protect_skin = gr.Checkbox(
+                    value=default("protect_skin"),
+                    label="Protect skin hues",
+                    info="reduces automatic saturation and manual vibrance changes on skin hues",
+                )
+                preserve_hue = gr.Checkbox(
+                    value=default("preserve_hue"),
+                    label="Preserve hue in highlights",
+                    info="rolls highlights off without letting the brightest channel clip alone",
+                )
             with gr.Row():
                 brightness = gr.Slider(minimum=-1.0, maximum=1.0, step=0.05, value=default("brightness"), label="Brightness")
                 shadows = gr.Slider(minimum=-1.0, maximum=1.0, step=0.05, value=default("shadows"), label="Shadows")
@@ -89,6 +95,7 @@ class ScriptPostprocessingFameGridAutoColor(scripts_postprocessing.ScriptPostpro
             "normalize_saturation": normalize_saturation,
             "saturation_strength": saturation_strength,
             "protect_skin": protect_skin,
+            "preserve_hue": preserve_hue,
             "brightness": brightness,
             "shadows": shadows,
             "highlights": highlights,
@@ -101,12 +108,13 @@ class ScriptPostprocessingFameGridAutoColor(scripts_postprocessing.ScriptPostpro
         pp: scripts_postprocessing.PostprocessedImage,
         enable=False,
         auto_color=True,
-        auto_color_strength=1.1,
+        auto_color_strength=0.8,
         correct_contrast=True,
-        contrast_clip_percent=7.3,
+        contrast_clip_percent=0.1,
         normalize_saturation=True,
         saturation_strength=0.15,
         protect_skin=True,
+        preserve_hue=True,
         brightness=0.1,
         shadows=-0.15,
         highlights=-0.05,
@@ -124,6 +132,7 @@ class ScriptPostprocessingFameGridAutoColor(scripts_postprocessing.ScriptPostpro
             normalize_saturation=normalize_saturation,
             saturation_strength=saturation_strength,
             protect_skin=protect_skin,
+            preserve_hue=preserve_hue,
             brightness=brightness,
             shadows=shadows,
             highlights=highlights,

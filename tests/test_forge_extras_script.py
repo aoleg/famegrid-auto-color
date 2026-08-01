@@ -28,6 +28,7 @@ EXPECTED_UI_KEYS = {
     "normalize_saturation",
     "saturation_strength",
     "protect_skin",
+    "preserve_hue",
     "brightness",
     "shadows",
     "highlights",
@@ -95,12 +96,13 @@ class FameGridAutoColorExtrasScriptTests(unittest.TestCase):
             pp,
             enable=True,
             auto_color=True,
-            auto_color_strength=1.1,
+            auto_color_strength=0.8,
             correct_contrast=True,
-            contrast_clip_percent=7.3,
+            contrast_clip_percent=0.1,
             normalize_saturation=True,
             saturation_strength=0.15,
             protect_skin=True,
+            preserve_hue=True,
             brightness=0.1,
             shadows=-0.15,
             highlights=-0.05,
@@ -111,7 +113,7 @@ class FameGridAutoColorExtrasScriptTests(unittest.TestCase):
         self.assertNotEqual(list(pp.image.getdata()), original_pixels)
         self.assertEqual(pp.info["FameGrid AC Auto Color"], True)
         self.assertEqual(pp.info["FameGrid AC Brightness"], 0.1)
-        self.assertEqual(len(pp.info), 12)
+        self.assertEqual(len(pp.info), len(EXPECTED_UI_KEYS) - 1)
 
     def test_process_defaults_match_node_defaults_when_only_enable_is_passed(self):
         # process()'s own kwarg defaults are a fallback if ever invoked without
@@ -123,7 +125,7 @@ class FameGridAutoColorExtrasScriptTests(unittest.TestCase):
         self.script.process(pp, enable=True)
 
         self.assertNotEqual(list(pp.image.getdata()), original_pixels)
-        self.assertEqual(pp.info["FameGrid AC Auto Color Strength"], 1.1)
+        self.assertEqual(pp.info["FameGrid AC Auto Color Strength"], 0.8)
         self.assertEqual(pp.info["FameGrid AC Vibrance"], -0.35)
 
 

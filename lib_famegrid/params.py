@@ -9,7 +9,9 @@ scripts/famegrid_auto_color_extras.py, and lib_famegrid/xyz.py.
 
 from __future__ import annotations
 
-BOOL_FIELDS = ("auto_color", "correct_contrast", "normalize_saturation", "protect_skin")
+BOOL_FIELDS = (
+    "auto_color", "correct_contrast", "normalize_saturation", "protect_skin", "preserve_hue",
+)
 FLOAT_FIELDS = (
     "auto_color_strength",
     "contrast_clip_percent",
@@ -22,7 +24,7 @@ FLOAT_FIELDS = (
 )
 FIELDS = (
     "auto_color", "auto_color_strength", "correct_contrast", "contrast_clip_percent",
-    "normalize_saturation", "saturation_strength", "protect_skin",
+    "normalize_saturation", "saturation_strength", "protect_skin", "preserve_hue",
     "brightness", "shadows", "highlights", "saturation", "vibrance",
 )
 
@@ -35,6 +37,7 @@ INFOTEXT_LABELS = {
     "normalize_saturation": "Saturation Norm",
     "saturation_strength": "Saturation Norm Strength",
     "protect_skin": "Protect Skin",
+    "preserve_hue": "Preserve Hue",
     "brightness": "Brightness",
     "shadows": "Shadows",
     "highlights": "Highlights",
@@ -58,6 +61,7 @@ def to_node_kwargs(values: dict) -> dict:
         normalize_saturation=bool(values["normalize_saturation"]),
         saturation_strength=float(values["saturation_strength"]),
         protect_skin=bool(values["protect_skin"]),
+        preserve_hue=bool(values["preserve_hue"]),
         brightness=float(values["brightness"]),
         shadows=float(values["shadows"]),
         highlights=float(values["highlights"]),

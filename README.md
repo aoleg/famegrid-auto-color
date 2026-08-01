@@ -127,12 +127,13 @@ The published defaults are the current FameGrid finishing preset:
 | Control | Default | What it does |
 | --- | ---: | --- |
 | `white_balance_power` | `8` | Legacy compatibility control. `0` disables auto color; any value above `0` enables Auto Color Curves. |
-| `auto_color_strength` | `1.10` | Blends the adaptive color and endpoint correction. |
+| `auto_color_strength` | `0.80` | Blends the adaptive color and endpoint correction. Values above `1.0` extrapolate past the computed correction. |
 | `correct_contrast` | `true` | Enables robust endpoint contrast as part of the color curves. |
-| `contrast_clip_percent` | `7.3` | Percentage used to form robust shadow and highlight color groups. |
+| `contrast_clip_percent` | `0.1` | Histogram tail used to form the shadow and highlight anchors. The effective tail is floored at `0.5%`. |
 | `normalize_saturation` | `true` | Corrects only images outside the conservative saturation band. |
 | `saturation_strength` | `0.15` | Strength of automatic saturation normalization. |
 | `protect_skin` | `true` | Reduces automatic saturation and manual vibrance changes on skin hues. |
+| `preserve_hue` | `true` | Drives the endpoint curves from luminance and scales all three channels together, so highlights roll off without rotating hue. |
 | `brightness` | `0.10` | Global brightness. Negative darkens; positive brightens. |
 | `shadows` | `-0.15` | Negative deepens shadows; positive lifts them. |
 | `highlights` | `-0.05` | Negative lowers highlights; positive raises them. |
@@ -154,9 +155,19 @@ The node calculates luminance and builds shadow and highlight color anchors from
 the configured histogram tails. Averaging groups of pixels is less sensitive to
 a single clipped pixel than using raw minimum and maximum values.
 
-When sufficient channel range exists, separate RGB endpoint curves map the
-estimated dark and light anchors into a usable tonal range. Images without enough
-tonal evidence skip the stretch instead of collapsing flat frames.
+With `preserve_hue` enabled (the default), those anchors are reduced to
+luminance and every channel of a pixel is scaled by the same gain, so the
+stretch is purely tonal and cannot change hue. Highlights above the shoulder
+roll off smoothly toward white instead of being clamped.
+
+This matters on bright saturated subjects, sunlit skin most of all. Scaling
+each channel against its own anchor and clamping at `1.0` lets the brightest
+channel saturate while the others keep climbing — on skin, red saturates first
+and the highlight drifts yellow, then flattens into a detail-free plateau.
+Disabling `preserve_hue` restores that pre-1.2 per-channel behavior.
+
+Images without enough tonal evidence skip the stretch instead of collapsing
+flat frames.
 
 ### 3. Find a likely-neutral midtone
 
@@ -197,7 +208,12 @@ grading latitude.
 
 - Start with the defaults and reduce `auto_color_strength` if a correction feels
   too assertive.
-- Lower `contrast_clip_percent` to preserve more of the original endpoints.
+- Raise `contrast_clip_percent` for a more assertive stretch. Large values push
+  a correspondingly large share of the image to pure black and white, so raise
+  it deliberately rather than by default.
+- Leave `preserve_hue` on unless you specifically want the pre-1.2 look; it has
+  no cost on images that never overshoot, and it is what keeps bright skin from
+  going yellow and flat.
 - Set `white_balance_power` to `0` to bypass auto color while retaining optional
   contrast and manual grading.
 - Keep `protect_skin` enabled for portraits unless you intentionally want a full
@@ -217,6 +233,9 @@ grading latitude.
   frame (see [Using it in Forge Neo](#using-it-in-forge-neo)), and enabling
   both the accordion and the Extras-tab operation for the same run applies
   the correction twice.
+- `preserve_hue` keeps the endpoint stretch from rotating hue, but the
+  neutral-midtone gamma is a color correction by design and will still shift
+  hue when it finds a cast to remove.
 
 ## Validation
 

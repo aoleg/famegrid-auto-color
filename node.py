@@ -43,17 +43,30 @@ class FameGridAutoColorCorrector:
                 "auto_color_strength": (
                     "FLOAT",
                     {
-                        "default": 1.1,
+                        "default": 0.8,
                         "min": 0.0,
                         "max": 1.5,
                         "step": 0.05,
-                        "tooltip": "Blend amount for the adaptive color and tone curves.",
+                        "tooltip": (
+                            "Blend amount for the adaptive color and tone curves. "
+                            "Values above 1.0 extrapolate past the computed correction."
+                        ),
                     },
                 ),
                 "correct_contrast": ("BOOLEAN", {"default": True}),
                 "contrast_clip_percent": (
                     "FLOAT",
-                    {"default": 7.3, "min": 0.0, "max": 10.0, "step": 0.1},
+                    {
+                        "default": 0.1,
+                        "min": 0.0,
+                        "max": 10.0,
+                        "step": 0.1,
+                        "tooltip": (
+                            "Histogram tail used to form the shadow and highlight anchors. "
+                            "Larger values crush more of the image to pure black and white; "
+                            "the effective tail is floored at 0.5%."
+                        ),
+                    },
                 ),
                 "normalize_saturation": ("BOOLEAN", {"default": True}),
                 "saturation_strength": (
@@ -67,6 +80,17 @@ class FameGridAutoColorCorrector:
                     },
                 ),
                 "protect_skin": ("BOOLEAN", {"default": True}),
+                "preserve_hue": (
+                    "BOOLEAN",
+                    {
+                        "default": True,
+                        "tooltip": (
+                            "Drive the endpoint curves from luminance and scale all three "
+                            "channels together, so highlights roll off without rotating hue. "
+                            "Disable for the pre-1.2 per-channel behavior."
+                        ),
+                    },
+                ),
                 "brightness": (
                     "FLOAT",
                     {
@@ -191,6 +215,58 @@ class FameGridAutoColorCorrector:
             values = values[::stride]
         return torch.quantile(values, quantile)
 
+    @staticmethod
+    def _soft_clip_preserve_hue(rgb: torch.Tensor, knee: float = 0.9) -> torch.Tensor:
+        """Roll values above `knee` off toward 1.0 without changing hue.
+
+        Every channel of a pixel is scaled by the same factor, so the R:G:B
+        ratios are untouched. A plain per-channel ``clamp(0, 1)`` instead lets
+        the brightest channel saturate first while the others keep climbing,
+        which rotates highlight hue -- on skin, red saturates first and the
+        result drifts yellow.
+
+        The curve is C1-continuous at `knee` (unit slope there) and asymptotic
+        to 1.0, so nothing ever lands on a flat, detail-free plateau.
+
+        A shoulder that asymptotes to 1.0 necessarily pulls down values just
+        below it too, so this is a no-op unless something actually overshoots.
+        Otherwise merely enabling hue preservation would dim near-white content
+        that was already perfectly in range.
+        """
+        rgb = rgb.clamp_min(0.0)
+        peak = rgb.max(dim=-1, keepdim=True).values
+        if not bool((peak > 1.0).any()):
+            return rgb
+
+        headroom = 1.0 - knee
+        excess = (peak - knee).clamp_min(0.0) / headroom
+        compressed = knee + headroom * (excess / (excess + 1.0))
+        scale = torch.where(peak > knee, compressed / peak.clamp_min(1e-7), torch.ones_like(peak))
+        return rgb * scale
+
+    @staticmethod
+    def _stretch_preserve_hue(
+        rgb: torch.Tensor,
+        dark: torch.Tensor,
+        light: torch.Tensor,
+        weights: torch.Tensor,
+    ) -> torch.Tensor:
+        """Apply the endpoint stretch to luminance, then scale RGB by the gain.
+
+        The per-channel variant maps each channel against its own anchor, which
+        doubles as a white balance but compresses whichever channel has least
+        headroom -- rotating hue in the highlights. Here the anchors are reduced
+        to luminance so the stretch is purely tonal; color correction is left to
+        the neutral-midtone gamma, which is the step actually designed for it.
+        """
+        dark_luma = (dark * weights).sum()
+        light_luma = (light * weights).sum()
+        span = (light_luma - dark_luma).clamp_min(0.05)
+
+        luma = (rgb * weights).sum(dim=-1, keepdim=True)
+        target = ((luma - dark_luma) / span).clamp_min(0.0)
+        return rgb * (target / luma.clamp_min(1e-6))
+
     @classmethod
     def _auto_color_curves(
         cls,
@@ -198,6 +274,7 @@ class FameGridAutoColorCorrector:
         clip_percent: float,
         correct_contrast: bool,
         strength: float,
+        preserve_hue: bool = True,
     ) -> torch.Tensor:
         """Build robust endpoint and neutral-midtone curves per batch item."""
         outputs = []
@@ -218,9 +295,17 @@ class FameGridAutoColorCorrector:
 
             raw_span = light - dark
             if correct_contrast and bool(torch.all(raw_span > 0.01)):
-                span = raw_span.clamp_min(0.05)
-                mapped = ((frame - dark) / span).clamp(0.0, 1.0)
-                mapped_sample = ((sample - dark) / span).clamp(0.0, 1.0)
+                if preserve_hue:
+                    mapped = cls._soft_clip_preserve_hue(
+                        cls._stretch_preserve_hue(frame, dark, light, luminance_weights)
+                    )
+                    mapped_sample = cls._soft_clip_preserve_hue(
+                        cls._stretch_preserve_hue(sample, dark, light, luminance_weights)
+                    )
+                else:
+                    span = raw_span.clamp_min(0.05)
+                    mapped = ((frame - dark) / span).clamp(0.0, 1.0)
+                    mapped_sample = ((sample - dark) / span).clamp(0.0, 1.0)
             else:
                 mapped = frame
                 mapped_sample = sample
@@ -258,7 +343,13 @@ class FameGridAutoColorCorrector:
             else:
                 corrected = mapped
 
-            outputs.append((frame + strength * (corrected - frame)).clamp(0.0, 1.0))
+            blended = frame + strength * (corrected - frame)
+            if preserve_hue:
+                # strength > 1.0 extrapolates past the correction and can push
+                # channels over 1.0; roll them off together rather than letting
+                # the brightest one clip on its own.
+                blended = cls._soft_clip_preserve_hue(blended)
+            outputs.append(blended.clamp(0.0, 1.0))
 
         return torch.stack(outputs, dim=0)
 
@@ -271,6 +362,7 @@ class FameGridAutoColorCorrector:
         saturation: float,
         vibrance: float,
         protect_skin: bool,
+        preserve_hue: bool = True,
     ) -> torch.Tensor:
         luminance_weights = rgb.new_tensor([0.299, 0.587, 0.114])
 
@@ -302,18 +394,21 @@ class FameGridAutoColorCorrector:
                 effect = torch.where(skin, effect * 0.5, effect)
             gray = luminance(rgb)[..., None]
             rgb = gray + (rgb - gray) * (1.0 + effect[..., None])
+        if preserve_hue:
+            rgb = FameGridAutoColorCorrector._soft_clip_preserve_hue(rgb)
         return rgb.clamp(0.0, 1.0)
 
     def correct(
         self,
         image: torch.Tensor,
         white_balance_power: int = 8,
-        auto_color_strength: float = 1.1,
+        auto_color_strength: float = 0.8,
         correct_contrast: bool = True,
-        contrast_clip_percent: float = 7.3,
+        contrast_clip_percent: float = 0.1,
         normalize_saturation: bool = True,
         saturation_strength: float = 0.15,
         protect_skin: bool = True,
+        preserve_hue: bool = True,
         brightness: float = 0.1,
         shadows: float = -0.15,
         highlights: float = -0.05,
@@ -332,6 +427,7 @@ class FameGridAutoColorCorrector:
                 contrast_clip_percent,
                 correct_contrast,
                 auto_color_strength,
+                preserve_hue,
             )
             contrast_applied = correct_contrast
 
@@ -343,14 +439,23 @@ class FameGridAutoColorCorrector:
             low = self._percentile_per_image(luminance, quantile)
             high = self._percentile_per_image(luminance, 1.0 - quantile)
             span = high - low
-            stretched = (rgb - low) / span.clamp_min(1e-7)
+            if preserve_hue:
+                # Drive the stretch from luminance and scale channels together.
+                # The per-channel form subtracts a scalar from every channel,
+                # which inflates saturation and lets the brightest channel clip
+                # on its own -- this path has no strength blend to soften it.
+                source = luminance.unsqueeze(-1)
+                target = ((source - low) / span.clamp_min(1e-7)).clamp_min(0.0)
+                stretched = self._soft_clip_preserve_hue(rgb * (target / source.clamp_min(1e-6)))
+            else:
+                stretched = (rgb - low) / span.clamp_min(1e-7)
             rgb = torch.where(span > 1e-7, stretched, rgb).clamp(0.0, 1.0)
 
         if normalize_saturation and saturation_strength > 0.0:
             rgb = self._normalize_saturation(rgb, saturation_strength, protect_skin)
 
         rgb = self._manual_grading(
-            rgb, brightness, shadows, highlights, saturation, vibrance, protect_skin
+            rgb, brightness, shadows, highlights, saturation, vibrance, protect_skin, preserve_hue
         )
 
         if image.shape[-1] > 3:
