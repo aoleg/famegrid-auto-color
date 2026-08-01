@@ -254,7 +254,7 @@ class FameGridAutoColorCorrector:
         dark: torch.Tensor,
         light: torch.Tensor,
         weights: torch.Tensor,
-        target_dark: float = 0.005,
+        shadow_compression: float = 0.5,
         highlight_compression: float = 1.0,
     ) -> torch.Tensor:
         """Endpoint-preserving tonal curve applied as one gain per pixel.
@@ -267,9 +267,18 @@ class FameGridAutoColorCorrector:
         scaled by the resulting gain, so R:G:B ratios -- and therefore hue --
         are untouched.
 
-        `target_dark` is deliberately small. It only has to keep the sub-anchor
-        tail off the floor; any larger and the midtone segment starts visibly
-        above black, lifting the whole shadow range and washing out the image.
+        Both tails use a derived target so their segment slope is fixed by
+        `shadow_compression` / `highlight_compression` wherever the anchors
+        land. A fixed absolute target instead couples the compression to the
+        anchor position: at the default `contrast_clip_percent` a shadow target
+        of 0.005 against an anchor at 0.061 crushed the sub-anchor tail 12x,
+        costing the darkest decile a third of its distinct levels.
+
+        The shadow default trades against washing: at 1.0 the tail passes
+        through untouched but the black point lifts ~9 levels, and at 0.04 --
+        what a fixed 0.005 target amounted to -- shadows crush. 0.5 places the
+        graded 5th percentile within a few levels of the ungraded source across
+        the test images.
 
         The highlight target is derived rather than fixed, so the segment above
         the anchor always has slope `highlight_compression` no matter where the
@@ -296,6 +305,7 @@ class FameGridAutoColorCorrector:
         if float(light_luma - dark_luma) < 0.05:
             return rgb
 
+        target_dark = shadow_compression * float(dark_luma)
         target_light = 1.0 - highlight_compression * (1.0 - light_luma)
 
         luma = (rgb * weights).sum(dim=-1, keepdim=True)

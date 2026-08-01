@@ -2,6 +2,25 @@
 
 All notable changes to FameGrid Auto Color are documented here.
 
+## 1.2.4 - 2026-08-01
+
+- The shadow tail now uses a derived target with a bounded slope, matching what
+  1.2.3 did for highlights. A fixed absolute target of 0.005 against a shadow
+  anchor at 0.061 was a 12x crush: the darkest decile lost a third of its
+  distinct levels (57 to 33 on a test frame) and the 5th percentile fell well
+  below the ungraded source. At the new 0.5 the graded 5th percentile lands
+  within a few levels of source across the test set (35.7 against 38.7, 30.6
+  against 30.3, 24.8 against 21.0).
+- Both tails are now symmetric in form: each has a compression factor fixing
+  its segment slope wherever the anchors land, rather than a fixed slice of
+  output range whose severity depends on anchor position.
+- Note the inherent trade. Midtone expansion is bought by compressing a tail,
+  so with highlights passing through untouched the shadow setting alone
+  controls how much tonal work the curve does. Relaxing the shadow compression
+  to protect blacks costs a little face modelling (about 2-4% of relative form
+  contrast at the shipped values); tightening it recovers that and crushes
+  shadows again.
+
 ## 1.2.3 - 2026-08-01
 
 - Highlights now pass through the endpoint curve untouched by default

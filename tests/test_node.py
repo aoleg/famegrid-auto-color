@@ -145,6 +145,32 @@ class FameGridAutoColorCorrectorTests(unittest.TestCase):
             self.assertGreater(slope, 0.5, f"highlight tail over-compressed at clip={clip}")
             self.assertTrue(torch.isfinite(mapped).all())
 
+    def test_shadow_tail_compression_is_bounded_at_any_clip(self):
+        """Content below the shadow anchor must keep its tonal separation.
+
+        A fixed absolute shadow target couples the compression to wherever the
+        anchor lands: at the default contrast_clip_percent, a target of 0.005
+        against an anchor at 0.061 crushed the tail 12x and cost the darkest
+        decile a third of its distinct levels.
+        """
+        weights = torch.tensor([0.299, 0.587, 0.114])
+        for clip in (0.1, 3.0, 7.3, 10.0):
+            image = torch.zeros(1, 128, 128, 3)
+            image[:] = torch.linspace(0.05, 0.95, 128).view(1, 128, 1, 1)
+
+            flat = image.reshape(-1, 3)
+            luma = (flat * weights).sum(dim=-1)
+            tail = max(clip / 100.0, 0.005)
+            dark = flat[luma <= torch.quantile(luma, tail)].mean(dim=0)
+            light = flat[luma >= torch.quantile(luma, 1.0 - tail)].mean(dim=0)
+            dark_luma = float((dark * weights).sum())
+
+            probe = torch.tensor([[[[dark_luma, dark_luma, dark_luma]]]])
+            at_anchor = float(self.node._stretch_preserve_hue(probe, dark, light, weights).max())
+            slope = at_anchor / max(dark_luma, 1e-6)
+
+            self.assertGreater(slope, 0.25, f"shadow tail over-compressed at clip={clip}")
+
     def test_positive_brightness_does_not_desaturate(self):
         """A brightness lift must not flatten colour.
 
