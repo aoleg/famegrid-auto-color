@@ -2,6 +2,22 @@
 
 All notable changes to FameGrid Auto Color are documented here.
 
+## 1.2.2 - 2026-08-01
+
+- Manual brightness/shadows/highlights no longer desaturate. They added the
+  same offset to every channel, which raises `max` while leaving `max - min`
+  and so lowers saturation — hardest in the darker, more saturated regions
+  that carry facial modelling. The default `brightness = 0.1` alone cost a
+  test portrait's face 12% of its saturation and read as a flattened nose,
+  even though its luminance contrast was intact. With `preserve_hue` the move
+  is now computed on luminance and applied as a common gain, holding R:G:B
+  ratios exactly: face saturation loss drops from 11.9% to 4.3%, and an
+  earlier portrait's hand recovers 0.232 to 0.261 against an ungraded 0.282.
+- That gain diverges as luminance approaches zero, so below a chroma floor —
+  where chroma is quantisation noise rather than signal — it blends back to
+  the additive form rather than amplifying it. Deep-shadow high-frequency
+  energy is unchanged (4.94 against the ungraded 4.98).
+
 ## 1.2.1 - 2026-08-01
 
 - The endpoint curve's highlight segment now holds a bounded slope instead of

@@ -145,6 +145,45 @@ class FameGridAutoColorCorrectorTests(unittest.TestCase):
             self.assertGreater(slope, 0.5, f"highlight tail over-compressed at clip={clip}")
             self.assertTrue(torch.isfinite(mapped).all())
 
+    def test_positive_brightness_does_not_desaturate(self):
+        """A brightness lift must not flatten colour.
+
+        Adding the same offset to every channel raises `max` while leaving
+        `max - min`, so saturation drops -- worst in the darker, saturated
+        regions that carry facial modelling. On a test portrait that cost the
+        face 12% of its saturation and read as a flattened nose.
+        """
+        rgb = torch.tensor([[[[0.60, 0.45, 0.40], [0.30, 0.18, 0.14]]]])
+
+        def mean_saturation(t):
+            saturation, _ = self.node._rgb_saturation_and_hue(t)
+            return float(saturation.mean())
+
+        before = mean_saturation(rgb)
+        preserved = self.node._manual_grading(rgb, 0.2, 0.0, 0.0, 0.0, 0.0, False, True)
+        legacy = self.node._manual_grading(rgb, 0.2, 0.0, 0.0, 0.0, 0.0, False, False)
+
+        self.assertGreater(float(preserved.mean()), float(rgb.mean()))  # it did brighten
+        self.assertAlmostEqual(mean_saturation(preserved), before, places=4)
+        self.assertLess(mean_saturation(legacy), before - 0.01)
+
+    def test_brightness_does_not_amplify_deep_shadow_noise(self):
+        """The saturation-preserving gain explodes near black; it must not be used there.
+
+        What matters is the channel spread, not the absolute lift: brightness
+        is *supposed* to raise a near-black pixel. An unbounded multiplicative
+        gain would blow this pixel's 0.001 spread up ~78x, turning shadow
+        quantisation noise into visible colour mottling.
+        """
+        near_black = torch.tensor([[[[0.002, 0.001, 0.001]]]])
+        spread_before = float(near_black.max() - near_black.min())
+
+        out = self.node._manual_grading(near_black, 0.2, 0.0, 0.0, 0.0, 0.0, False, True)
+        spread_after = float(out.max() - out.min())
+
+        self.assertLess(spread_after / spread_before, 5.0)
+        self.assertTrue(torch.isfinite(out).all())
+
     def test_manual_controls_are_bounded(self):
         image = torch.rand(1, 48, 64, 3)
         output, = self.node.correct(

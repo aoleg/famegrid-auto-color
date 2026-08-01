@@ -464,10 +464,38 @@ class FameGridAutoColorCorrector:
             return (image * luminance_weights).sum(dim=-1)
 
         def adjust_tone(image, amount, mask):
+            """Move tone toward/away from white, optionally without desaturating.
+
+            The plain form adds the same offset to every channel, which raises
+            `max` while leaving `max - min` -- so it lowers saturation, hardest
+            in the darker, more saturated regions where facial modelling lives.
+            A small positive brightness therefore flattens a face even when its
+            luminance contrast is untouched.
+
+            With `preserve_hue`, the move is computed on luminance and applied
+            as a common gain, which holds R:G:B ratios exactly. That gain
+            explodes as luminance approaches zero, so below `chroma_floor` --
+            where chroma is quantisation noise rather than signal -- it blends
+            back to the additive form instead of amplifying it.
+            """
             amount = max(-1.0, min(1.0, float(amount))) * 0.5
+            mask = mask[..., None]
+            if not preserve_hue:
+                if amount >= 0:
+                    return image + amount * mask * (1.0 - image)
+                return image + amount * mask * image
+
+            chroma_floor = 0.15
+            current = (image * luminance_weights).sum(dim=-1, keepdim=True)
             if amount >= 0:
-                return image + amount * mask[..., None] * (1.0 - image)
-            return image + amount * mask[..., None] * image
+                target = current + amount * mask * (1.0 - current)
+            else:
+                target = current + amount * mask * current
+
+            additive = image + (target - current)
+            scaled = image * (target / current.clamp_min(1e-6))
+            trust = (current / chroma_floor).clamp(0.0, 1.0)
+            return additive + trust * (scaled - additive)
 
         if brightness:
             rgb = adjust_tone(rgb, brightness, torch.ones_like(luminance(rgb)))

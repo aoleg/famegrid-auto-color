@@ -206,6 +206,11 @@ pixel already is, so positive values lift the black point rather than shifting
 everything evenly — a small positive value can visibly wash out shadows and
 work against the endpoint correction. Shadows and highlights use smooth
 luminance-weighted masks, while saturation changes all colors uniformly.
+
+With `preserve_hue` enabled, all three tone controls are computed on luminance
+and applied as a common gain across the channels, so they change brightness
+without draining color. Applied per channel instead they quietly desaturate,
+which flattens the modelling on faces and other rounded subjects.
 Vibrance weights its effect by current saturation, so muted colors move more and
 already-strong colors move less. All operations remain bounded to ComfyUI's
 `0–1` image range.
