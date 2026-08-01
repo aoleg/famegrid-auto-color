@@ -34,7 +34,7 @@ EXPECTED_PARAM_ORDER = [
 ]
 
 # matches EXPECTED_PARAM_ORDER[1:]
-DEFAULT_ARGS = (True, 0.8, True, 0.1, True, 0.15, True, True, 0.1, -0.15, -0.05, 0.0, -0.35)
+DEFAULT_ARGS = (True, 0.8, True, 0.1, True, 0.15, True, True, 0.0, -0.15, -0.05, 0.0, -0.35)
 
 _installed_module_names = []
 famegrid_auto_color = None
@@ -141,7 +141,7 @@ class FameGridAutoColorScriptTests(unittest.TestCase):
 
         self.assertNotEqual(list(pp.image.getdata()), original_pixels)
         self.assertEqual(p.extra_generation_params["FameGrid AC Auto Color"], True)
-        self.assertEqual(p.extra_generation_params["FameGrid AC Brightness"], 0.1)
+        self.assertEqual(p.extra_generation_params["FameGrid AC Brightness"], 0.0)
         self.assertEqual(len(p.extra_generation_params), len(EXPECTED_PARAM_ORDER) - 1)
 
     def test_auto_color_checkbox_maps_to_legacy_white_balance_power(self):

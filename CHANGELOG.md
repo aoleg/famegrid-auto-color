@@ -32,6 +32,13 @@ settings.**
   correction and overrode the preset's own `shadows = -0.15`.
 - The hue-preserving shoulder is a no-op on images that never exceed `1.0`, so
   enabling it cannot dim near-white content that was already in range.
+- Replaced the hard percentile endpoint stretch on the per-channel path with a
+  continuous, endpoint-preserving three-segment curve, so shadow and highlight
+  tail values stay distinct instead of flattening to black or white, and capped
+  that path's effective blend at `1.0` to stop over-strength extrapolation from
+  creating new clipping. Contributed by Miguel (`76dfaf27`); on the
+  hue-preserving path the shoulder handles overshoot, so strength above `1.0`
+  remains meaningful there.
 
 ## 1.1.0 - 2026-08-01
 

@@ -23,7 +23,7 @@ inert under the platform that doesn't use them) -- see
 ## Features
 
 - Automatic color-cast correction from image statistics
-- Robust shadow and highlight endpoint curves
+- Full-range-preserving shadow and highlight endpoint curves
 - Likely-neutral midtone correction with false-neutral safeguards
 - Automatic contrast and conservative saturation normalization
 - Manual brightness, shadows, highlights, saturation, and vibrance
@@ -127,7 +127,7 @@ The published defaults are the current FameGrid finishing preset:
 | Control | Default | What it does |
 | --- | ---: | --- |
 | `white_balance_power` | `8` | Legacy compatibility control. `0` disables auto color; any value above `0` enables Auto Color Curves. |
-| `auto_color_strength` | `0.80` | Blends the adaptive color and endpoint correction. Values above `1.0` extrapolate past the computed correction. |
+| `auto_color_strength` | `0.80` | Blends the adaptive color and endpoint correction. Values above `1.0` extrapolate past the computed correction; with `preserve_hue` off that extrapolation is capped at `1.0` to avoid creating clipping. |
 | `correct_contrast` | `true` | Enables robust endpoint contrast as part of the color curves. |
 | `contrast_clip_percent` | `0.1` | Histogram tail used to form the shadow and highlight anchors. The effective tail is floored at `0.5%`. |
 | `normalize_saturation` | `true` | Corrects only images outside the conservative saturation band. |
@@ -166,7 +166,13 @@ channel saturate while the others keep climbing — on skin, red saturates first
 and the highlight drifts yellow, then flattens into a detail-free plateau.
 Disabling `preserve_hue` restores that pre-1.2 per-channel behavior.
 
-Images without enough tonal evidence skip the stretch instead of collapsing
+With `preserve_hue` disabled, separate RGB curves instead pass continuously
+through true black, the estimated shadow anchor, the estimated highlight anchor,
+and true white. That keeps each channel's own endpoint neutralization and leaves
+pixels beyond the anchors distinct rather than clipped, but because the anchors
+keep their original luminance it performs little tonal expansion.
+
+Images without enough tonal evidence skip the correction instead of collapsing
 flat frames.
 
 ### 3. Find a likely-neutral midtone
@@ -211,12 +217,13 @@ grading latitude.
 
 - Start with the defaults and reduce `auto_color_strength` if a correction feels
   too assertive.
-- Raise `contrast_clip_percent` for a more assertive stretch. Large values push
-  a correspondingly large share of the image to pure black and white, so raise
-  it deliberately rather than by default.
-- Leave `preserve_hue` on unless you specifically want the pre-1.2 look; it has
-  no cost on images that never overshoot, and it is what keeps bright skin from
-  going yellow and flat.
+- `contrast_clip_percent` selects the shadow and highlight groups used for
+  analysis. Raise it for a more assertive stretch; large values push a
+  correspondingly large share of the image toward pure black and white.
+- Leave `preserve_hue` on unless you specifically want the per-channel look; it
+  has no cost on images that never overshoot, and it is what keeps bright skin
+  from going yellow and flat. Turn it off for endpoint colour neutralization
+  with minimal tonal change.
 - Set `white_balance_power` to `0` to bypass auto color while retaining optional
   contrast and manual grading.
 - Keep `protect_skin` enabled for portraits unless you intentionally want a full
@@ -229,7 +236,8 @@ grading latitude.
 - This is a global correction, not a semantic or locally masked grade.
 - Any deterministic neutral estimator can be ambiguous when a scene contains no
   credible neutral colors or is intentionally dominated by one hue.
-- Clipped source channels cannot be reconstructed.
+- Clipped source channels cannot be reconstructed, but the node avoids creating
+  new endpoint clipping in its automatic technical curve.
 - The node does not convert color spaces or attach ICC profiles; it operates on
   the RGB values supplied by ComfyUI or Forge.
 - In Forge Neo, the txt2img/img2img accordion grades the whole composited

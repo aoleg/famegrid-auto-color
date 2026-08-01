@@ -18,7 +18,7 @@ class FameGridAutoColorCorrector:
     RETURN_TYPES = ("IMAGE",)
     RETURN_NAMES = ("image",)
     DESCRIPTION = (
-        "Deterministic per-image auto color curves using robust shadow/highlight "
+        "Endpoint-preserving per-image auto color curves using robust shadow/highlight "
         "anchors and a likely-neutral midtone, plus conservative saturation control."
     )
 
@@ -271,6 +271,51 @@ class FameGridAutoColorCorrector:
         target = ((luma - dark_luma) / span).clamp_min(0.0)
         return rgb * (target / luma.clamp_min(1e-6))
 
+    @staticmethod
+    def _endpoint_preserving_map(
+        values: torch.Tensor,
+        dark: torch.Tensor,
+        light: torch.Tensor,
+        correct_contrast: bool,
+    ) -> torch.Tensor:
+        """Neutralize endpoint colors without flattening the histogram tails.
+
+        Each channel uses a continuous three-segment curve through 0, the robust
+        shadow anchor, the robust highlight anchor, and 1. Unlike a percentile
+        stretch, values outside the anchors retain distinct tonal information.
+        """
+        if not correct_contrast:
+            return values
+
+        raw_span = light - dark
+        if not bool(torch.all(raw_span > 0.01)):
+            return values
+
+        luminance_weights = values.new_tensor([0.299, 0.587, 0.114])
+        target_dark = (dark * luminance_weights).sum().clamp(0.001, 0.45)
+        target_light = (light * luminance_weights).sum().clamp(0.55, 0.999)
+        if float(target_light - target_dark) < 0.05:
+            return values
+
+        dark = dark.clamp(1e-4, 0.98)
+        light = torch.maximum(light, dark + 0.01).clamp_max(0.9999)
+        view_shape = (1,) * (values.ndim - 1) + (3,)
+        dark_view = dark.view(view_shape)
+        light_view = light.view(view_shape)
+
+        low = values * (target_dark / dark).view(view_shape)
+        middle = target_dark + (values - dark_view) * (
+            (target_light - target_dark) / (light - dark)
+        ).view(view_shape)
+        high = target_light + (values - light_view) * (
+            (1.0 - target_light) / (1.0 - light)
+        ).view(view_shape)
+        return torch.where(
+            values <= dark_view,
+            low,
+            torch.where(values <= light_view, middle, high),
+        ).clamp(0.0, 1.0)
+
     @classmethod
     def _auto_color_curves(
         cls,
@@ -280,7 +325,7 @@ class FameGridAutoColorCorrector:
         strength: float,
         preserve_hue: bool = True,
     ) -> torch.Tensor:
-        """Build robust endpoint and neutral-midtone curves per batch item."""
+        """Build full-range-preserving endpoint and neutral curves per image."""
         outputs = []
         tail = max(clip_percent / 100.0, 0.005)
         luminance_weights = rgb.new_tensor([0.299, 0.587, 0.114])
@@ -297,9 +342,9 @@ class FameGridAutoColorCorrector:
             dark = sample[luminance <= low_luminance].mean(dim=0)
             light = sample[luminance >= high_luminance].mean(dim=0)
 
-            raw_span = light - dark
-            if correct_contrast and bool(torch.all(raw_span > 0.01)):
-                if preserve_hue:
+            if preserve_hue:
+                raw_span = light - dark
+                if correct_contrast and bool(torch.all(raw_span > 0.01)):
                     mapped = cls._soft_clip_preserve_hue(
                         cls._stretch_preserve_hue(frame, dark, light, luminance_weights)
                     )
@@ -307,12 +352,16 @@ class FameGridAutoColorCorrector:
                         cls._stretch_preserve_hue(sample, dark, light, luminance_weights)
                     )
                 else:
-                    span = raw_span.clamp_min(0.05)
-                    mapped = ((frame - dark) / span).clamp(0.0, 1.0)
-                    mapped_sample = ((sample - dark) / span).clamp(0.0, 1.0)
+                    mapped = frame
+                    mapped_sample = sample
             else:
-                mapped = frame
-                mapped_sample = sample
+                # The per-channel path is now the upstream endpoint-preserving
+                # curve rather than a clamped percentile stretch: it neutralizes
+                # the endpoint colors while keeping tail values distinct.
+                mapped = cls._endpoint_preserving_map(frame, dark, light, correct_contrast)
+                mapped_sample = cls._endpoint_preserving_map(
+                    sample, dark, light, correct_contrast
+                )
 
             mapped_luminance = (mapped_sample * luminance_weights).sum(dim=1)
             maximum = mapped_sample.max(dim=1).values
@@ -347,12 +396,17 @@ class FameGridAutoColorCorrector:
             else:
                 corrected = mapped
 
-            blended = frame + strength * (corrected - frame)
             if preserve_hue:
-                # strength > 1.0 extrapolates past the correction and can push
-                # channels over 1.0; roll them off together rather than letting
-                # the brightest one clip on its own.
-                blended = cls._soft_clip_preserve_hue(blended)
+                # Extrapolation past the curve can push channels over 1.0; the
+                # shoulder rolls them off together, so strength above 1.0 stays
+                # meaningful here instead of needing to be capped.
+                blended = cls._soft_clip_preserve_hue(frame + strength * (corrected - frame))
+            else:
+                # Without the shoulder, extrapolating beyond the technical curve
+                # creates new clipping, so 1.0 is the maximum effective blend even
+                # though old workflows may hold a larger saved value such as 1.10.
+                blend = max(0.0, min(1.0, float(strength)))
+                blended = frame + blend * (corrected - frame)
             outputs.append(blended.clamp(0.0, 1.0))
 
         return torch.stack(outputs, dim=0)

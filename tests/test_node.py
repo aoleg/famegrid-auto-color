@@ -94,10 +94,13 @@ class FameGridAutoColorCorrectorTests(unittest.TestCase):
         drift_preserved = abs(self._hue_of_skin(preserved) - before)
         drift_legacy = abs(self._hue_of_skin(legacy) - before)
 
-        # The legacy per-channel path rotates this highlight ~26 degrees toward
-        # yellow; the preserved path must hold it essentially exactly.
-        self.assertGreater(drift_legacy, 10.0)
+        # The clamped percentile stretch that originally rotated this highlight
+        # ~26 degrees toward yellow is gone: preserve_hue drives the curve from
+        # luminance, and the per-channel path is now the endpoint-preserving
+        # curve, which never clamps. Both must stay stable, with the
+        # luminance-driven path exact by construction.
         self.assertLess(drift_preserved, 0.5)
+        self.assertLess(drift_legacy, 2.0)
 
     def test_preserve_hue_avoids_the_flat_white_plateau(self):
         image = torch.rand(1, 64, 64, 3) * 0.5 + 0.45
@@ -122,6 +125,61 @@ class FameGridAutoColorCorrectorTests(unittest.TestCase):
         self.assertTrue(torch.isfinite(output).all())
         self.assertGreaterEqual(float(output.min()), 0.0)
         self.assertLessEqual(float(output.max()), 1.0)
+
+    def test_auto_curve_does_not_create_new_endpoint_clipping(self):
+        ramp = torch.linspace(0.0, 1.0, 4096).reshape(1, 64, 64, 1)
+        image = torch.cat(
+            (
+                ramp,
+                torch.sqrt(ramp),
+                ramp.square(),
+            ),
+            dim=-1,
+        )
+        output, = self.node.correct(
+            image,
+            normalize_saturation=False,
+            brightness=0.0,
+            shadows=0.0,
+            highlights=0.0,
+            saturation=0.0,
+            vibrance=0.0,
+        )
+        self.assertLessEqual(int((output == 0.0).sum()), int((image == 0.0).sum()))
+        self.assertLessEqual(int((output == 1.0).sum()), int((image == 1.0).sum()))
+
+    def test_strength_above_one_does_not_extrapolate_technical_curve(self):
+        # The cap guards the per-channel curve, which has no shoulder and would
+        # clip if extrapolated past. With preserve_hue on, the hue-preserving
+        # shoulder absorbs the overshoot, so strength above 1.0 stays meaningful
+        # there and is deliberately not capped.
+        image = torch.rand(1, 48, 64, 3)
+        common = dict(
+            normalize_saturation=False,
+            brightness=0.0,
+            shadows=0.0,
+            highlights=0.0,
+            saturation=0.0,
+            vibrance=0.0,
+        )
+        at_one, = self.node.correct(image, auto_color_strength=1.0, preserve_hue=False, **common)
+        above_one, = self.node.correct(image, auto_color_strength=1.1, preserve_hue=False, **common)
+        self.assertTrue(torch.equal(at_one, above_one))
+
+    def test_strength_above_one_still_applies_when_preserving_hue(self):
+        image = torch.rand(1, 48, 64, 3)
+        common = dict(
+            normalize_saturation=False,
+            brightness=0.0,
+            shadows=0.0,
+            highlights=0.0,
+            saturation=0.0,
+            vibrance=0.0,
+            preserve_hue=True,
+        )
+        at_one, = self.node.correct(image, auto_color_strength=1.0, **common)
+        above_one, = self.node.correct(image, auto_color_strength=1.3, **common)
+        self.assertFalse(torch.equal(at_one, above_one))
 
 
 if __name__ == "__main__":
