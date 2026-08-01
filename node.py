@@ -255,7 +255,7 @@ class FameGridAutoColorCorrector:
         light: torch.Tensor,
         weights: torch.Tensor,
         target_dark: float = 0.005,
-        highlight_compression: float = 0.7,
+        highlight_compression: float = 1.0,
     ) -> torch.Tensor:
         """Endpoint-preserving tonal curve applied as one gain per pixel.
 
@@ -278,6 +278,12 @@ class FameGridAutoColorCorrector:
         means an ~11x squeeze: bright subjects sitting above the anchor -- lit
         skin, a pale garment -- lose their tonal separation and read as blown
         even though nothing actually clips.
+
+        It defaults to 1.0, i.e. highlights pass through untouched and the
+        correction only deepens shadows and expands midtones. A quarter of a
+        typical portrait's skin sits above the anchor, so any compression there
+        is visible as flattened modelling long before it buys useful contrast;
+        lower values trade that detail for a punchier tone curve.
 
         The difference from the per-channel variant is where the anchors land.
         There they map to their own luminance, which neutralizes endpoint color

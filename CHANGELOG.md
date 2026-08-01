@@ -2,6 +2,22 @@
 
 All notable changes to FameGrid Auto Color are documented here.
 
+## 1.2.3 - 2026-08-01
+
+- Highlights now pass through the endpoint curve untouched by default
+  (`highlight_compression` 1.0), so the correction only deepens shadows and
+  expands midtones. Even the bounded 0.7 compression shipped in 1.2.1 was
+  visible: about a quarter of a portrait's skin sits above the highlight
+  anchor, and compressing it cost a hand 11.8% of its relative form contrast
+  and the cheeks 3.8%. Every measured region is now at or above the ungraded
+  source (hand -0.9%, cheeks +1.5 to +1.9%, forehead +1.1%).
+- Lowering `contrast_clip_percent` does not help this and makes it worse: the
+  larger tail is what supplies the midtone expansion the face sits in. At clip
+  0.1 the same regions measure -7.0 to -11.6% regardless of compression.
+- Net contrast on a bright, high-key frame is now close to ungraded (171.2
+  against 172.1) since the tonal work is confined to shadows and midtones; a
+  more typical frame still gains (162.5 against 152.3).
+
 ## 1.2.2 - 2026-08-01
 
 - Manual brightness/shadows/highlights no longer desaturate. They added the
