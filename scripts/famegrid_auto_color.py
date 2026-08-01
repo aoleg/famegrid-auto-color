@@ -12,6 +12,8 @@ not once per batch -- reads that cached state so every image in the batch
 sees the same, XYZ-resolved settings.
 """
 
+import time
+
 import gradio as gr
 
 from modules import scripts
@@ -19,11 +21,12 @@ from modules.infotext_utils import PasteField
 from modules.ui_components import InputAccordion
 
 from lib_famegrid.adapter import apply
-from lib_famegrid.loader import load_corrector_class
+from lib_famegrid.loader import load_corrector_class, node_stamp
 from lib_famegrid.params import FIELDS, INFOTEXT_LABELS, INFOTEXT_PREFIX, to_infotext, to_node_kwargs
 from lib_famegrid.xyz import xyz_support
 
-_FameGridAutoColorCorrector = load_corrector_class(scripts.basedir())
+_EXTENSION_ROOT = scripts.basedir()
+_FameGridAutoColorCorrector = load_corrector_class(_EXTENSION_ROOT)
 _corrector = _FameGridAutoColorCorrector()
 
 
@@ -170,7 +173,12 @@ class FameGridAutoColorScript(scripts.Script):
 
         if not FameGridAutoColorScript._diagnosed:
             FameGridAutoColorScript._diagnosed = True
-            print(f"[FameGridAutoColor] diagnostic: image mode={pp.image.mode} size={pp.image.size} params={node_kwargs}")
+            # node.py's mtime identifies which build is actually live -- the
+            # cheapest way to tell "the pull didn't land" from "the pull landed
+            # and the output is genuinely unchanged".
+            _, mtime_ns, size = node_stamp(_EXTENSION_ROOT)
+            stamp = "missing" if mtime_ns is None else f"{time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(mtime_ns / 1e9))} ({size}B)"
+            print(f"[FameGridAutoColor] diagnostic: node.py={stamp} image mode={pp.image.mode} size={pp.image.size} params={node_kwargs}")
 
         pp.image = apply(_corrector, pp.image, **node_kwargs)
         p.extra_generation_params.update(to_infotext(config))

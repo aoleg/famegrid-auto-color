@@ -17,6 +17,14 @@ All notable changes to FameGrid Auto Color are documented here.
   accounted for roughly a quarter of the desaturation seen on that sweater.
 - Neither change affects clipping, which remains at 0.00% on both ends for the
   published defaults.
+- Fixed the Forge Neo loader caching `node.py` permanently for the life of the
+  process. Forge's "Reload UI" re-executes `scripts/*.py` but leaves
+  `lib_famegrid` in `sys.modules`, so after a `git pull` the extension kept
+  running whatever `node.py` was on disk at startup — an update appeared to do
+  nothing until the whole process was restarted. The cache is now keyed on
+  `node.py`'s mtime and size.
+- The one-shot diagnostic line now reports `node.py`'s timestamp and size, so
+  the live build is identifiable from the console.
 
 ## 1.2.0 - 2026-08-01
 
