@@ -20,7 +20,7 @@ class FameGridAutoColorCorrectorTests(unittest.TestCase):
             "auto_color_strength": 0.8,
             "contrast_clip_percent": 0.1,
             "saturation_strength": 0.15,
-            "brightness": 0.1,
+            "brightness": 0.0,
             "shadows": -0.15,
             "highlights": -0.05,
             "saturation": 0.0,

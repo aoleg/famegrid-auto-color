@@ -94,11 +94,15 @@ class FameGridAutoColorCorrector:
                 "brightness": (
                     "FLOAT",
                     {
-                        "default": 0.1,
+                        "default": 0.0,
                         "min": -1.0,
                         "max": 1.0,
                         "step": 0.05,
-                        "tooltip": "Global manual brightness: negative darkens, positive brightens.",
+                        "tooltip": (
+                            "Global manual brightness: negative darkens, positive brightens. "
+                            "Weighted toward the shadow end, so positive values lift the "
+                            "black point rather than shifting the whole frame evenly."
+                        ),
                     },
                 ),
                 "shadows": (
@@ -409,7 +413,7 @@ class FameGridAutoColorCorrector:
         saturation_strength: float = 0.15,
         protect_skin: bool = True,
         preserve_hue: bool = True,
-        brightness: float = 0.1,
+        brightness: float = 0.0,
         shadows: float = -0.15,
         highlights: float = -0.05,
         saturation: float = 0.0,

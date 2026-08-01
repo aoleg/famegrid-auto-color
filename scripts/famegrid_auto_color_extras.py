@@ -115,7 +115,7 @@ class ScriptPostprocessingFameGridAutoColor(scripts_postprocessing.ScriptPostpro
         saturation_strength=0.15,
         protect_skin=True,
         preserve_hue=True,
-        brightness=0.1,
+        brightness=0.0,
         shadows=-0.15,
         highlights=-0.05,
         saturation=0.0,

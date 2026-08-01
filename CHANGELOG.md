@@ -26,6 +26,10 @@ settings.**
   clips well under 1%.
 - Changed `auto_color_strength` default from `1.1` to `0.8`. Values above `1.0`
   extrapolate past the computed correction rather than blending toward it.
+- Changed `brightness` default from `0.1` to `0.0`. Its gain scales with how
+  dark a pixel already is, so `0.1` raised the black point by ~10 levels while
+  moving highlights by ~2 — a shadow lift that partly undid the endpoint
+  correction and overrode the preset's own `shadows = -0.15`.
 - The hue-preserving shoulder is a no-op on images that never exceed `1.0`, so
   enabling it cannot dim near-white content that was already in range.
 

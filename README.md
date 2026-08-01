@@ -134,7 +134,7 @@ The published defaults are the current FameGrid finishing preset:
 | `saturation_strength` | `0.15` | Strength of automatic saturation normalization. |
 | `protect_skin` | `true` | Reduces automatic saturation and manual vibrance changes on skin hues. |
 | `preserve_hue` | `true` | Drives the endpoint curves from luminance and scales all three channels together, so highlights roll off without rotating hue. |
-| `brightness` | `0.10` | Global brightness. Negative darkens; positive brightens. |
+| `brightness` | `0.00` | Global brightness. Negative darkens; positive brightens. Weighted toward the shadow end, so positive values lift the black point. |
 | `shadows` | `-0.15` | Negative deepens shadows; positive lifts them. |
 | `highlights` | `-0.05` | Negative lowers highlights; positive raises them. |
 | `saturation` | `0.00` | Global saturation. `-1` produces grayscale; positive values boost color. |
@@ -188,7 +188,10 @@ receive a reduced adjustment when protection is enabled.
 
 ### 5. Apply the manual finishing grade
 
-Brightness affects the full frame. Shadows and highlights use smooth
+Brightness applies across the full frame, but its gain scales with how dark a
+pixel already is, so positive values lift the black point rather than shifting
+everything evenly — a small positive value can visibly wash out shadows and
+work against the endpoint correction. Shadows and highlights use smooth
 luminance-weighted masks, while saturation changes all colors uniformly.
 Vibrance weights its effect by current saturation, so muted colors move more and
 already-strong colors move less. All operations remain bounded to ComfyUI's
