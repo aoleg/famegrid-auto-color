@@ -133,6 +133,8 @@ The published defaults are the current FameGrid finishing preset:
 | `normalize_saturation` | `true` | Corrects only images outside the conservative saturation band. |
 | `saturation_strength` | `0.15` | Strength of automatic saturation normalization. |
 | `protect_skin` | `true` | Reduces automatic saturation and manual vibrance changes on skin hues. |
+| `shadow_depth` | `0.50` | How hard the curve compresses tones below the shadow anchor. Higher deepens blacks and buys midtone contrast; lower keeps shadow separation. `0` passes shadows through untouched. |
+| `highlight_rolloff` | `0.00` | How hard the curve compresses tones above the highlight anchor. Around a quarter of a typical portrait's skin sits up there, so raising this flattens modelling before it buys useful contrast. |
 | `preserve_hue` | `true` | Drives the endpoint curves from luminance and scales all three channels together, so highlights roll off without rotating hue. |
 | `brightness` | `0.10` | Global brightness. Negative darkens; positive brightens. Weighted toward the shadow end, so positive values lift the black point — which is what keeps the default `contrast_clip_percent` from crushing shadows. |
 | `shadows` | `-0.15` | Negative deepens shadows; positive lifts them. |
@@ -234,6 +236,12 @@ grading latitude.
   It is paired with `brightness`: a large clip compresses shadows hard, and the
   default `+0.1` brightness is what keeps them off the floor. If you lower one,
   reconsider the other.
+- `shadow_depth` and `highlight_rolloff` are the two ends of one trade: the
+  curve buys midtone contrast by compressing a tail, so raising either adds
+  punch at the cost of detail in that tail. The defaults protect highlights
+  entirely and compress shadows moderately, which suits faces; raise
+  `highlight_rolloff` for a softer, more filmic look on scenes without
+  important highlight detail.
 - Leave `preserve_hue` on unless you specifically want the per-channel look; it
   has no cost on images that never overshoot, and it is what keeps bright skin
   from going yellow and flat. Turn it off for endpoint colour neutralization

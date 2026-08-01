@@ -2,6 +2,15 @@
 
 All notable changes to FameGrid Auto Color are documented here.
 
+## 1.2.5 - 2026-08-01
+
+- Exposed the two endpoint-curve tail compressions as `shadow_depth` (default
+  `0.5`) and `highlight_rolloff` (default `0.0`), in the ComfyUI node, both
+  Forge Neo surfaces, the infotext, and X/Y/Z Plot. They are the two ends of
+  one trade -- the curve buys midtone contrast by compressing a tail -- so they
+  make the punch-versus-detail balance directly adjustable instead of fixed.
+- Defaults are unchanged, so output is bit-identical to 1.2.4.
+
 ## 1.2.4 - 2026-08-01
 
 - The shadow tail now uses a derived target with a bounded slope, matching what

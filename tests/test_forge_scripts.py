@@ -26,6 +26,8 @@ EXPECTED_PARAM_ORDER = [
     "saturation_strength",
     "protect_skin",
     "preserve_hue",
+    "shadow_depth",
+    "highlight_rolloff",
     "brightness",
     "shadows",
     "highlights",
@@ -34,7 +36,7 @@ EXPECTED_PARAM_ORDER = [
 ]
 
 # matches EXPECTED_PARAM_ORDER[1:]
-DEFAULT_ARGS = (True, 0.8, True, 7.3, True, 0.15, True, True, 0.1, -0.15, -0.05, 0.0, -0.20)
+DEFAULT_ARGS = (True, 0.8, True, 7.3, True, 0.15, True, True, 0.5, 0.0, 0.1, -0.15, -0.05, 0.0, -0.20)
 
 _installed_module_names = []
 famegrid_auto_color = None
@@ -110,6 +112,8 @@ class FameGridAutoColorScriptTests(unittest.TestCase):
             node_defaults["saturation_strength"][1]["default"],
             node_defaults["protect_skin"][1]["default"],
             node_defaults["preserve_hue"][1]["default"],
+            node_defaults["shadow_depth"][1]["default"],
+            node_defaults["highlight_rolloff"][1]["default"],
             node_defaults["brightness"][1]["default"],
             node_defaults["shadows"][1]["default"],
             node_defaults["highlights"][1]["default"],
@@ -152,7 +156,7 @@ class FameGridAutoColorScriptTests(unittest.TestCase):
         # which only holds if auto_color=False correctly maps to
         # white_balance_power=0 inside to_node_kwargs().
         self.script.before_process_batch(
-            p, True, False, 0.8, False, 0.1, False, 0.15, True, True, 0.0, 0.0, 0.0, 0.0, 0.0
+            p, True, False, 0.8, False, 0.1, False, 0.15, True, True, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
         )
         self.script.postprocess_image_after_composite(p, pp)
 

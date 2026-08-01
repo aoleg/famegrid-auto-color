@@ -79,6 +79,19 @@ class ScriptPostprocessingFameGridAutoColor(scripts_postprocessing.ScriptPostpro
                     info="rolls highlights off without letting the brightest channel clip alone",
                 )
             with gr.Row():
+                shadow_depth = gr.Slider(
+                    minimum=0.0, maximum=1.0, step=0.05,
+                    value=default("shadow_depth"),
+                    label="Shadow depth",
+                    info="higher deepens blacks and buys midtone contrast; lower keeps shadow separation",
+                )
+                highlight_rolloff = gr.Slider(
+                    minimum=0.0, maximum=1.0, step=0.05,
+                    value=default("highlight_rolloff"),
+                    label="Highlight rolloff",
+                    info="higher softens highlights, but flattens lit skin before it buys contrast",
+                )
+            with gr.Row():
                 brightness = gr.Slider(minimum=-1.0, maximum=1.0, step=0.05, value=default("brightness"), label="Brightness")
                 shadows = gr.Slider(minimum=-1.0, maximum=1.0, step=0.05, value=default("shadows"), label="Shadows")
             with gr.Row():
@@ -96,6 +109,8 @@ class ScriptPostprocessingFameGridAutoColor(scripts_postprocessing.ScriptPostpro
             "saturation_strength": saturation_strength,
             "protect_skin": protect_skin,
             "preserve_hue": preserve_hue,
+            "shadow_depth": shadow_depth,
+            "highlight_rolloff": highlight_rolloff,
             "brightness": brightness,
             "shadows": shadows,
             "highlights": highlights,
@@ -115,6 +130,8 @@ class ScriptPostprocessingFameGridAutoColor(scripts_postprocessing.ScriptPostpro
         saturation_strength=0.15,
         protect_skin=True,
         preserve_hue=True,
+        shadow_depth=0.5,
+        highlight_rolloff=0.0,
         brightness=0.1,
         shadows=-0.15,
         highlights=-0.05,
@@ -133,6 +150,8 @@ class ScriptPostprocessingFameGridAutoColor(scripts_postprocessing.ScriptPostpro
             saturation_strength=saturation_strength,
             protect_skin=protect_skin,
             preserve_hue=preserve_hue,
+            shadow_depth=shadow_depth,
+            highlight_rolloff=highlight_rolloff,
             brightness=brightness,
             shadows=shadows,
             highlights=highlights,

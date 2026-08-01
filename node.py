@@ -91,6 +91,34 @@ class FameGridAutoColorCorrector:
                         ),
                     },
                 ),
+                "shadow_depth": (
+                    "FLOAT",
+                    {
+                        "default": 0.5,
+                        "min": 0.0,
+                        "max": 1.0,
+                        "step": 0.05,
+                        "tooltip": (
+                            "How hard the endpoint curve compresses tones below the shadow "
+                            "anchor. Higher deepens blacks and buys midtone contrast; lower "
+                            "keeps shadow separation. 0 passes shadows through untouched."
+                        ),
+                    },
+                ),
+                "highlight_rolloff": (
+                    "FLOAT",
+                    {
+                        "default": 0.0,
+                        "min": 0.0,
+                        "max": 1.0,
+                        "step": 0.05,
+                        "tooltip": (
+                            "How hard the endpoint curve compresses tones above the highlight "
+                            "anchor. A quarter of a typical portrait's skin sits up there, so "
+                            "raising this flattens modelling before it buys useful contrast."
+                        ),
+                    },
+                ),
                 "brightness": (
                     "FLOAT",
                     {
@@ -376,6 +404,8 @@ class FameGridAutoColorCorrector:
         correct_contrast: bool,
         strength: float,
         preserve_hue: bool = True,
+        shadow_compression: float = 0.5,
+        highlight_compression: float = 1.0,
     ) -> torch.Tensor:
         """Build full-range-preserving endpoint and neutral curves per image."""
         outputs = []
@@ -398,10 +428,16 @@ class FameGridAutoColorCorrector:
                 raw_span = light - dark
                 if correct_contrast and bool(torch.all(raw_span > 0.01)):
                     mapped = cls._soft_clip_preserve_hue(
-                        cls._stretch_preserve_hue(frame, dark, light, luminance_weights)
+                        cls._stretch_preserve_hue(
+                            frame, dark, light, luminance_weights,
+                            shadow_compression, highlight_compression,
+                        )
                     )
                     mapped_sample = cls._soft_clip_preserve_hue(
-                        cls._stretch_preserve_hue(sample, dark, light, luminance_weights)
+                        cls._stretch_preserve_hue(
+                            sample, dark, light, luminance_weights,
+                            shadow_compression, highlight_compression,
+                        )
                     )
                 else:
                     mapped = frame
@@ -547,6 +583,8 @@ class FameGridAutoColorCorrector:
         saturation_strength: float = 0.15,
         protect_skin: bool = True,
         preserve_hue: bool = True,
+        shadow_depth: float = 0.5,
+        highlight_rolloff: float = 0.0,
         brightness: float = 0.1,
         shadows: float = -0.15,
         highlights: float = -0.05,
@@ -566,6 +604,8 @@ class FameGridAutoColorCorrector:
                 correct_contrast,
                 auto_color_strength,
                 preserve_hue,
+                1.0 - float(shadow_depth),
+                1.0 - float(highlight_rolloff),
             )
             contrast_applied = correct_contrast
 

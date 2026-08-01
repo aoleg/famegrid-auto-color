@@ -14,6 +14,8 @@ BOOL_FIELDS = (
 )
 FLOAT_FIELDS = (
     "auto_color_strength",
+    "shadow_depth",
+    "highlight_rolloff",
     "contrast_clip_percent",
     "saturation_strength",
     "brightness",
@@ -25,7 +27,7 @@ FLOAT_FIELDS = (
 FIELDS = (
     "auto_color", "auto_color_strength", "correct_contrast", "contrast_clip_percent",
     "normalize_saturation", "saturation_strength", "protect_skin", "preserve_hue",
-    "brightness", "shadows", "highlights", "saturation", "vibrance",
+    "shadow_depth", "highlight_rolloff", "brightness", "shadows", "highlights", "saturation", "vibrance",
 )
 
 INFOTEXT_PREFIX = "FameGrid AC"
@@ -38,6 +40,8 @@ INFOTEXT_LABELS = {
     "saturation_strength": "Saturation Norm Strength",
     "protect_skin": "Protect Skin",
     "preserve_hue": "Preserve Hue",
+    "shadow_depth": "Shadow Depth",
+    "highlight_rolloff": "Highlight Rolloff",
     "brightness": "Brightness",
     "shadows": "Shadows",
     "highlights": "Highlights",
@@ -62,6 +66,8 @@ def to_node_kwargs(values: dict) -> dict:
         saturation_strength=float(values["saturation_strength"]),
         protect_skin=bool(values["protect_skin"]),
         preserve_hue=bool(values["preserve_hue"]),
+        shadow_depth=float(values["shadow_depth"]),
+        highlight_rolloff=float(values["highlight_rolloff"]),
         brightness=float(values["brightness"]),
         shadows=float(values["shadows"]),
         highlights=float(values["highlights"]),

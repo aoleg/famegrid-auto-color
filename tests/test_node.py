@@ -25,6 +25,8 @@ class FameGridAutoColorCorrectorTests(unittest.TestCase):
             "highlights": -0.05,
             "saturation": 0.0,
             "vibrance": -0.20,
+            "shadow_depth": 0.5,
+            "highlight_rolloff": 0.0,
         }
         for name, value in expected.items():
             self.assertEqual(inputs[name][1]["default"], value)
