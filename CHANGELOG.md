@@ -2,6 +2,22 @@
 
 All notable changes to FameGrid Auto Color are documented here.
 
+## 1.2.1 - 2026-08-01
+
+- The endpoint curve's highlight segment now holds a bounded slope instead of
+  mapping the whole above-anchor tail into a fixed slice of the output range.
+  At the default `contrast_clip_percent` that slice was ~2% — an ~11x squeeze —
+  so bright subjects sitting above the anchor lost their tonal separation and
+  read as blown out without a single pixel clipping. Measured on a portrait in
+  a pale knit sweater, 14.2% of the face and 9.0% of the sweater fell in that
+  zone; face tonal spread recovers from 30.2 to 41.5 against the ungraded 48.1,
+  and an earlier test portrait's hand from 39.1 to 53.1 against 54.7.
+- Changed `vibrance` default from `-0.35` to `-0.20`. Vibrance targets muted
+  colors hardest, so pale low-saturation garments took the brunt of it; this
+  accounted for roughly a quarter of the desaturation seen on that sweater.
+- Neither change affects clipping, which remains at 0.00% on both ends for the
+  published defaults.
+
 ## 1.2.0 - 2026-08-01
 
 Fixes blown, yellow-shifted highlights on bright saturated subjects — sunlit

@@ -34,7 +34,7 @@ EXPECTED_PARAM_ORDER = [
 ]
 
 # matches EXPECTED_PARAM_ORDER[1:]
-DEFAULT_ARGS = (True, 0.8, True, 7.3, True, 0.15, True, True, 0.1, -0.15, -0.05, 0.0, -0.35)
+DEFAULT_ARGS = (True, 0.8, True, 7.3, True, 0.15, True, True, 0.1, -0.15, -0.05, 0.0, -0.20)
 
 _installed_module_names = []
 famegrid_auto_color = None

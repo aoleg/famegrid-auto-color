@@ -119,7 +119,7 @@ class ScriptPostprocessingFameGridAutoColor(scripts_postprocessing.ScriptPostpro
         shadows=-0.15,
         highlights=-0.05,
         saturation=0.0,
-        vibrance=-0.35,
+        vibrance=-0.20,
     ):
         if not enable:
             return

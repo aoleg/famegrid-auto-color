@@ -138,7 +138,7 @@ The published defaults are the current FameGrid finishing preset:
 | `shadows` | `-0.15` | Negative deepens shadows; positive lifts them. |
 | `highlights` | `-0.05` | Negative lowers highlights; positive raises them. |
 | `saturation` | `0.00` | Global saturation. `-1` produces grayscale; positive values boost color. |
-| `vibrance` | `-0.35` | Targets muted colors more strongly than colors that are already saturated. |
+| `vibrance` | `-0.20` | Targets muted colors more strongly than colors that are already saturated — so pale, low-saturation subjects like a beige garment are affected most. |
 
 Manual grading controls range from `-1` to `1`.
 
@@ -160,6 +160,12 @@ through true black, the shadow anchor, the highlight anchor, and true white,
 so values outside the anchors stay distinct rather than clamping flat. It runs
 on luminance and scales all three channels by the resulting gain, so the
 correction is purely tonal and cannot change hue.
+
+The segment above the highlight anchor is held to a bounded slope, so bright
+subjects that sit above it — lit skin, a pale garment — keep their tonal
+separation. Without that bound a large `contrast_clip_percent` pushes the
+anchor down into real subject matter and squeezes everything above it into a
+few output levels, which reads as blown-out even though nothing clips.
 
 This matters on bright saturated subjects, sunlit skin most of all. Scaling
 each channel against its own anchor and clamping at `1.0` lets the brightest

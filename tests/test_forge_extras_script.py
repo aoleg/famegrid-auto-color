@@ -107,7 +107,7 @@ class FameGridAutoColorExtrasScriptTests(unittest.TestCase):
             shadows=-0.15,
             highlights=-0.05,
             saturation=0.0,
-            vibrance=-0.35,
+            vibrance=-0.20,
         )
 
         self.assertNotEqual(list(pp.image.getdata()), original_pixels)
@@ -126,7 +126,7 @@ class FameGridAutoColorExtrasScriptTests(unittest.TestCase):
 
         self.assertNotEqual(list(pp.image.getdata()), original_pixels)
         self.assertEqual(pp.info["FameGrid AC Auto Color Strength"], 0.8)
-        self.assertEqual(pp.info["FameGrid AC Vibrance"], -0.35)
+        self.assertEqual(pp.info["FameGrid AC Vibrance"], -0.20)
 
 
 if __name__ == "__main__":

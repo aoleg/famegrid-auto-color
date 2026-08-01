@@ -24,7 +24,7 @@ class FameGridAutoColorCorrectorTests(unittest.TestCase):
             "shadows": -0.15,
             "highlights": -0.05,
             "saturation": 0.0,
-            "vibrance": -0.35,
+            "vibrance": -0.20,
         }
         for name, value in expected.items():
             self.assertEqual(inputs[name][1]["default"], value)
@@ -111,6 +111,39 @@ class FameGridAutoColorCorrectorTests(unittest.TestCase):
             return float((t >= t.max() - 1e-6).all(dim=-1).float().mean())
 
         self.assertLessEqual(all_channels_maxed(preserved), all_channels_maxed(legacy))
+
+    def test_highlight_tail_compression_is_bounded_at_any_clip(self):
+        """Content above the highlight anchor must keep its tonal separation.
+
+        A fixed highlight target gives that whole tail a fixed slice of the
+        output range, so a large contrast_clip_percent -- which pushes the
+        anchor down into real subject matter -- squeezed it by ~11x. Bright
+        skin and pale fabric then lost their separation and read as blown
+        without a single pixel actually clipping.
+        """
+        weights = torch.tensor([0.299, 0.587, 0.114])
+        for clip in (0.1, 3.0, 7.3, 10.0):
+            image = torch.zeros(1, 128, 128, 3)
+            image[:] = torch.linspace(0.05, 0.95, 128).view(1, 128, 1, 1)
+
+            flat = image.reshape(-1, 3)
+            luma = (flat * weights).sum(dim=-1)
+            tail = max(clip / 100.0, 0.005)
+            light = flat[luma >= torch.quantile(luma, 1.0 - tail)].mean(dim=0)
+            dark = flat[luma <= torch.quantile(luma, tail)].mean(dim=0)
+
+            mapped = self.node._stretch_preserve_hue(image, dark, light, weights)
+            light_luma = float((light * weights).sum())
+
+            # Measure the realised slope of the segment above the anchor.
+            probe = torch.tensor([[[[light_luma, light_luma, light_luma]]]])
+            top = torch.tensor([[[[1.0, 1.0, 1.0]]]])
+            at_anchor = float(self.node._stretch_preserve_hue(probe, dark, light, weights).max())
+            at_top = float(self.node._stretch_preserve_hue(top, dark, light, weights).max())
+            slope = (at_top - at_anchor) / max(1.0 - light_luma, 1e-6)
+
+            self.assertGreater(slope, 0.5, f"highlight tail over-compressed at clip={clip}")
+            self.assertTrue(torch.isfinite(mapped).all())
 
     def test_manual_controls_are_bounded(self):
         image = torch.rand(1, 48, 64, 3)

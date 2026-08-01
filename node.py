@@ -126,7 +126,7 @@ class FameGridAutoColorCorrector:
                 "vibrance": (
                     "FLOAT",
                     {
-                        "default": -0.35,
+                        "default": -0.20,
                         "min": -1.0,
                         "max": 1.0,
                         "step": 0.05,
@@ -255,7 +255,7 @@ class FameGridAutoColorCorrector:
         light: torch.Tensor,
         weights: torch.Tensor,
         target_dark: float = 0.005,
-        target_light: float = 0.98,
+        highlight_compression: float = 0.7,
     ) -> torch.Tensor:
         """Endpoint-preserving tonal curve applied as one gain per pixel.
 
@@ -271,16 +271,26 @@ class FameGridAutoColorCorrector:
         tail off the floor; any larger and the midtone segment starts visibly
         above black, lifting the whole shadow range and washing out the image.
 
+        The highlight target is derived rather than fixed, so the segment above
+        the anchor always has slope `highlight_compression` no matter where the
+        anchor lands. A fixed target instead gives that whole tail a fixed
+        slice of the output range, which at a large `contrast_clip_percent`
+        means an ~11x squeeze: bright subjects sitting above the anchor -- lit
+        skin, a pale garment -- lose their tonal separation and read as blown
+        even though nothing actually clips.
+
         The difference from the per-channel variant is where the anchors land.
         There they map to their own luminance, which neutralizes endpoint color
-        but performs no tonal expansion. Here they map to `target_dark` and
-        `target_light`, so the midtones genuinely stretch; endpoint color is
-        left to the neutral-midtone gamma, the step designed for it.
+        but performs no tonal expansion. Here they stretch the midtones;
+        endpoint color is left to the neutral-midtone gamma, the step designed
+        for it.
         """
         dark_luma = (dark * weights).sum().clamp(0.0, 0.45)
         light_luma = (light * weights).sum().clamp(0.55, 1.0)
         if float(light_luma - dark_luma) < 0.05:
             return rgb
+
+        target_light = 1.0 - highlight_compression * (1.0 - light_luma)
 
         luma = (rgb * weights).sum(dim=-1, keepdim=True)
         below = luma * (target_dark / dark_luma.clamp_min(1e-4))
@@ -497,7 +507,7 @@ class FameGridAutoColorCorrector:
         shadows: float = -0.15,
         highlights: float = -0.05,
         saturation: float = 0.0,
-        vibrance: float = -0.35,
+        vibrance: float = -0.20,
     ):
         self._validate_image(image)
 
